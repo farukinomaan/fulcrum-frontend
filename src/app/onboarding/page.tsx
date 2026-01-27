@@ -1,3 +1,5 @@
+// Force Vercel Rebuild - Attempt 2
+
 'use client';
 
 import { useState, useEffect, Suspense, ReactNode } from 'react';
