@@ -5,11 +5,11 @@ import {
   Send, Bell, CheckCircle2, AlertCircle, Clock,
   TrendingUp, MessageSquare, Activity as ActivityIcon,
   FileText, CreditCard, RefreshCw, DollarSign,
-  ShieldCheck, Settings
+  ShieldCheck, Settings, LogOut, User
 } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
-import { api } from '@/lib/api'; // Kept for reconcile, but we use direct fetch for data
+import { api } from '@/lib/api'; 
 
 // --- TYPES ---
 interface Invoice {
@@ -43,6 +43,7 @@ interface Activity {
 export default function Home() {
   const router = useRouter();
   const [activeView, setActiveView] = useState<'feed' | 'transactions'>('feed');
+  const [isProfileOpen, setIsProfileOpen] = useState(false); // Dropdown state
 
   // Real Data State
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -149,14 +150,12 @@ export default function Home() {
       setLoadingData(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        // --- FIX: Use Direct Fetch to prevent 'api' library issues ---
-        // We use Promise.allSettled so if one fails, the other still loads
+        // Direct Fetch to ensure robust data loading
         const [invRes, txnRes] = await Promise.all([
              fetch(`${API_URL}/invoices?user_id=${user.id}`).catch(err => null),
              fetch(`${API_URL}/transactions?user_id=${user.id}`).catch(err => null)
         ]);
 
-        // Process Invoices
         if (invRes && invRes.ok) {
             const invData = await invRes.json();
             setInvoices(Array.isArray(invData) ? invData : []);
@@ -164,10 +163,8 @@ export default function Home() {
             setInvoices([]);
         }
 
-        // Process Transactions
         if (txnRes && txnRes.ok) {
             const txnData = await txnRes.json();
-            // Handle structure: { balance: x, transactions: [...] } OR [...]
             if (txnData && txnData.transactions) {
                 setTransactions(txnData.transactions);
             } else if (Array.isArray(txnData)) {
@@ -182,7 +179,6 @@ export default function Home() {
     } catch (error) {
       console.error("Failed to fetch real data", error);
     } finally {
-      // FIX: Ensure loading ALWAYS stops
       setLoadingData(false);
     }
   };
@@ -194,11 +190,17 @@ export default function Home() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return alert("Please log in first");
 
-      await fetch(`${API_URL}/dashboard/sync?user_id=${user.id}`, {
+      const res = await fetch(`${API_URL}/dashboard/sync?user_id=${user.id}`, {
         method: 'POST'
       });
-
-      if (activeView === 'transactions') loadRealData();
+      
+      const result = await res.json();
+      if(result.status === 'error') {
+          alert("Sync Failed: " + result.message);
+      } else {
+          // Success: Reload data immediately
+          await loadRealData(); 
+      }
 
     } catch (e) {
       console.error(e);
@@ -213,7 +215,6 @@ export default function Home() {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       try {
-          // Try API first, fallback to fetch if needed
           const result = await api.runReconciliation(user.id);
           setReconResult(result);
           await loadRealData();
@@ -224,6 +225,11 @@ export default function Home() {
           setTimeout(() => setReconResult(null), 5000);
       }
     }
+  };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
   };
 
   const handleTestFeed = async () => {
@@ -306,9 +312,33 @@ export default function Home() {
             <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
             <span className="text-sm font-medium text-slate-600">Books are audit-ready</span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 relative">
             <button className="p-2 text-slate-400 hover:text-slate-600 transition-colors relative"><Bell className="w-5 h-5" /></button>
-            <div className="w-8 h-8 rounded-full bg-slate-200 border border-slate-300"></div>
+            
+            {/* --- NEW: PROFILE DROPDOWN (Click to open, with Sign Out) --- */}
+            <div className="relative">
+              <button 
+                onClick={() => setIsProfileOpen(!isProfileOpen)}
+                className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center font-bold text-xs hover:ring-2 hover:ring-gray-200 transition-all focus:outline-none"
+              >
+                ME
+              </button>
+
+              {isProfileOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 py-1 z-50 animate-in fade-in zoom-in-95 duration-200">
+                   <div className="px-4 py-3 border-b border-slate-100">
+                      <p className="text-sm font-medium text-slate-900">My Account</p>
+                   </div>
+                   <button onClick={() => router.push('/settings')} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors">
+                      <Settings className="w-4 h-4" /> Settings
+                   </button>
+                   <button onClick={handleSignOut} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors">
+                      <LogOut className="w-4 h-4" /> Sign Out
+                   </button>
+                </div>
+              )}
+            </div>
+
           </div>
         </header>
 
