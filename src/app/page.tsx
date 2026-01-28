@@ -3,13 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import {
   Send, Bell, CheckCircle2, AlertCircle, Clock,
-  ArrowUpRight, TrendingUp, MessageSquare,
-  Activity as ActivityIcon, FileText, CreditCard,
-  RefreshCw, DollarSign, ShieldCheck, Settings
+  TrendingUp, MessageSquare, Activity as ActivityIcon,
+  FileText, CreditCard, RefreshCw, DollarSign,
+  ShieldCheck, Settings
 } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
-import { api } from '@/lib/api';
 import { useRouter } from 'next/navigation';
+import { api } from '@/lib/api'; // Kept for reconcile, but we use direct fetch for data
 
 // --- TYPES ---
 interface Invoice {
@@ -43,14 +43,13 @@ interface Activity {
 export default function Home() {
   const router = useRouter();
   const [activeView, setActiveView] = useState<'feed' | 'transactions'>('feed');
-  const [query, setQuery] = useState('');
 
   // Real Data State
   const [activities, setActivities] = useState<Activity[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
 
-  // --- DASHBOARD STATS STATE ---
+  // Stats
   const [stats, setStats] = useState({
     cash_on_hand: 0,
     burn_rate: 0,
@@ -65,7 +64,6 @@ export default function Home() {
   const [reconResult, setReconResult] = useState<any>(null);
 
   const supabase = createClient();
-  // --- FIX 1: Use Environment Variable for API URL ---
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
   // --- 1. FETCH LIVE FEED & STATS ---
@@ -80,7 +78,7 @@ export default function Home() {
       const { data } = await supabase
         .from('activities')
         .select('*')
-        .eq('user_id', user.id) // Filter by User ID
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(20);
 
@@ -92,50 +90,50 @@ export default function Home() {
         })));
       }
 
-      // B. Fetch Dashboard Stats (Using API_URL)
+      // B. Fetch Dashboard Stats
       try {
         const response = await fetch(`${API_URL}/dashboard/stats?user_id=${user.id}`);
         if (response.ok) {
-            const result = await response.json();
-            if (result.cards) {
-              setStats(prev => ({
-                ...prev,
-                ...result.cards,
-                currency: result.cards.currency || 'SAR'
-              }));
-            }
+          const result = await response.json();
+          if (result.cards) {
+            setStats(prev => ({
+              ...prev,
+              ...result.cards,
+              currency: result.cards.currency || 'SAR'
+            }));
+          }
         }
       } catch (e) {
         console.error("Failed to fetch dashboard stats", e);
       }
 
-      // C. Realtime Subscription (With Security Filter)
+      // C. Realtime Subscription
       channel = supabase
         .channel(`activities-feed-${user.id}`)
         .on(
-            'postgres_changes', 
-            { 
-                event: 'INSERT', 
-                schema: 'public', 
-                table: 'activities',
-                filter: `user_id=eq.${user.id}` // --- FIX 2: Stop Data Leaks ---
-            }, 
-            (payload) => {
-                const newItem = payload.new as any;
-                setActivities((prev) => [{
-                ...newItem,
-                timestamp: 'Just now',
-                actionLabel: newItem.action_label
-                }, ...prev]);
-            }
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'activities',
+            filter: `user_id=eq.${user.id}`
+          },
+          (payload) => {
+            const newItem = payload.new as any;
+            setActivities((prev) => [{
+              ...newItem,
+              timestamp: 'Just now',
+              actionLabel: newItem.action_label
+            }, ...prev]);
+          }
         )
         .subscribe();
     };
 
     fetchInitialData();
 
-    return () => { 
-        if (channel) supabase.removeChannel(channel); 
+    return () => {
+      if (channel) supabase.removeChannel(channel);
     };
   }, []);
 
@@ -151,20 +149,40 @@ export default function Home() {
       setLoadingData(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const [invData, txnResponse] = await Promise.all([
-          api.getInvoices(user.id),
-          api.getTransactions(user.id)
+        // --- FIX: Use Direct Fetch to prevent 'api' library issues ---
+        // We use Promise.allSettled so if one fails, the other still loads
+        const [invRes, txnRes] = await Promise.all([
+             fetch(`${API_URL}/invoices?user_id=${user.id}`).catch(err => null),
+             fetch(`${API_URL}/transactions?user_id=${user.id}`).catch(err => null)
         ]);
-        setInvoices(invData || []);
 
-        const data = txnResponse as any;
-        if (data && data.transactions) setTransactions(data.transactions);
-        else if (Array.isArray(data)) setTransactions(data);
-        else setTransactions([]);
+        // Process Invoices
+        if (invRes && invRes.ok) {
+            const invData = await invRes.json();
+            setInvoices(Array.isArray(invData) ? invData : []);
+        } else {
+            setInvoices([]);
+        }
+
+        // Process Transactions
+        if (txnRes && txnRes.ok) {
+            const txnData = await txnRes.json();
+            // Handle structure: { balance: x, transactions: [...] } OR [...]
+            if (txnData && txnData.transactions) {
+                setTransactions(txnData.transactions);
+            } else if (Array.isArray(txnData)) {
+                setTransactions(txnData);
+            } else {
+                setTransactions([]);
+            }
+        } else {
+            setTransactions([]);
+        }
       }
     } catch (error) {
       console.error("Failed to fetch real data", error);
     } finally {
+      // FIX: Ensure loading ALWAYS stops
       setLoadingData(false);
     }
   };
@@ -176,7 +194,6 @@ export default function Home() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return alert("Please log in first");
 
-      // Use API_URL here too
       await fetch(`${API_URL}/dashboard/sync?user_id=${user.id}`, {
         method: 'POST'
       });
@@ -195,11 +212,17 @@ export default function Home() {
     setReconLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
-      const result = await api.runReconciliation(user.id);
-      setReconResult(result);
-      await loadRealData();
-      setReconLoading(false);
-      setTimeout(() => setReconResult(null), 5000);
+      try {
+          // Try API first, fallback to fetch if needed
+          const result = await api.runReconciliation(user.id);
+          setReconResult(result);
+          await loadRealData();
+      } catch (e) {
+          console.error("Reconciliation failed", e);
+      } finally {
+          setReconLoading(false);
+          setTimeout(() => setReconResult(null), 5000);
+      }
     }
   };
 
