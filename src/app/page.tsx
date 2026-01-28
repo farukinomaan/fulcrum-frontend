@@ -65,9 +65,13 @@ export default function Home() {
   const [reconResult, setReconResult] = useState<any>(null);
 
   const supabase = createClient();
+  // --- FIX 1: Use Environment Variable for API URL ---
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
   // --- 1. FETCH LIVE FEED & STATS ---
   useEffect(() => {
+    let channel: any;
+
     const fetchInitialData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -76,7 +80,7 @@ export default function Home() {
       const { data } = await supabase
         .from('activities')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', user.id) // Filter by User ID
         .order('created_at', { ascending: false })
         .limit(20);
 
@@ -88,39 +92,51 @@ export default function Home() {
         })));
       }
 
-      // B. Fetch Dashboard Stats
+      // B. Fetch Dashboard Stats (Using API_URL)
       try {
-        const response = await fetch(`http://localhost:8000/dashboard/stats?user_id=${user.id}`);
-        const result = await response.json();
-
-        if (result.cards) {
-          setStats(prev => ({
-            ...prev,
-            ...result.cards,
-            currency: result.cards.currency || 'SAR'
-          }));
+        const response = await fetch(`${API_URL}/dashboard/stats?user_id=${user.id}`);
+        if (response.ok) {
+            const result = await response.json();
+            if (result.cards) {
+              setStats(prev => ({
+                ...prev,
+                ...result.cards,
+                currency: result.cards.currency || 'SAR'
+              }));
+            }
         }
       } catch (e) {
         console.error("Failed to fetch dashboard stats", e);
       }
+
+      // C. Realtime Subscription (With Security Filter)
+      channel = supabase
+        .channel(`activities-feed-${user.id}`)
+        .on(
+            'postgres_changes', 
+            { 
+                event: 'INSERT', 
+                schema: 'public', 
+                table: 'activities',
+                filter: `user_id=eq.${user.id}` // --- FIX 2: Stop Data Leaks ---
+            }, 
+            (payload) => {
+                const newItem = payload.new as any;
+                setActivities((prev) => [{
+                ...newItem,
+                timestamp: 'Just now',
+                actionLabel: newItem.action_label
+                }, ...prev]);
+            }
+        )
+        .subscribe();
     };
 
     fetchInitialData();
 
-    // Listen for Realtime Updates
-    const channel = supabase
-      .channel('activities-feed')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'activities' }, (payload) => {
-        const newItem = payload.new as any;
-        setActivities((prev) => [{
-          ...newItem,
-          timestamp: 'Just now',
-          actionLabel: newItem.action_label
-        }, ...prev]);
-      })
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
+    return () => { 
+        if (channel) supabase.removeChannel(channel); 
+    };
   }, []);
 
   // --- 2. FETCH TRANSACTIONS (On Tab Switch) ---
@@ -160,8 +176,8 @@ export default function Home() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return alert("Please log in first");
 
-      // Call the Python Backend
-      await fetch(`http://localhost:8000/dashboard/sync?user_id=${user.id}`, {
+      // Use API_URL here too
+      await fetch(`${API_URL}/dashboard/sync?user_id=${user.id}`, {
         method: 'POST'
       });
 
@@ -228,7 +244,6 @@ export default function Home() {
             active={activeView === 'transactions'}
             onClick={() => setActiveView('transactions')}
           />
-          {/* --- UPDATED: Reports Link --- */}
           <NavItem
             icon={<FileText />}
             label="Reports"

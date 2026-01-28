@@ -11,10 +11,13 @@ export default function LoginPage() {
 
   const handleGoogleLogin = async () => {
     try {
+      // --- FIX: Dynamic Redirect (Works on Localhost AND Vercel) ---
+      const redirectUrl = typeof window !== 'undefined' ? window.location.origin : '';
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${location.origin}/auth/callback`,
+          redirectTo: `${redirectUrl}/auth/callback`,
         },
       });
       if (error) throw error;
