@@ -107,12 +107,13 @@ function OnboardingContent() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
-            // Upsert prevents duplicate key errors if they double-click
+            // Upsert with channels
             const { error } = await supabase.from('settings').upsert({
                 user_id: user.id,
                 business_name: 'My Business', 
                 currency: 'SAR',
-                language: 'en'
+                language: 'en',
+                channels: selectedServices.channels // Saving Channels Now!
             }, { onConflict: 'user_id' });
 
             if (error) {
@@ -236,7 +237,7 @@ function OnboardingContent() {
                     </div>
                 )}
 
-                {/* --- STEP 4: REVIEW --- */}
+                {/* --- STEP 4: REVIEW (UPDATED TO SHOW CHANNELS) --- */}
                 {step === 4 && (
                     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <div className="text-center mb-12">
@@ -248,8 +249,16 @@ function OnboardingContent() {
                                 <div className="w-24 h-24 bg-black rounded-2xl mx-auto mb-6 flex items-center justify-center"><span className="text-white text-3xl font-bold">✓</span></div>
                                 <h3 className="text-2xl font-bold text-black mb-4">Connected Services</h3>
                                 <div className="space-y-3 mb-8">
-                                    <div className="flex items-center justify-center gap-3 p-4 bg-gray-50 rounded-xl"><span className="font-medium text-black">{selectedServices.accounting}</span></div>
-                                    <div className="flex items-center justify-center gap-3 p-4 bg-gray-50 rounded-xl"><span className="font-medium text-black">{selectedServices.banking}</span></div>
+                                    {selectedServices.accounting && <div className="flex items-center justify-center gap-3 p-4 bg-gray-50 rounded-xl"><span className="font-medium text-black">{selectedServices.accounting}</span></div>}
+                                    {selectedServices.banking && <div className="flex items-center justify-center gap-3 p-4 bg-gray-50 rounded-xl"><span className="font-medium text-black">{selectedServices.banking}</span></div>}
+                                    {/* --- SHOW CHANNELS HERE --- */}
+                                    {selectedServices.channels.length > 0 && (
+                                        <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
+                                            {selectedServices.channels.map(c => (
+                                                <span key={c} className="px-3 py-1 bg-black text-white text-sm rounded-full">{c}</span>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                             <div className="flex items-center justify-between">
