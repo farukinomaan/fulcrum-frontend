@@ -12,47 +12,54 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         const checkAuth = async () => {
-            // 1. Check if user is logged in
             const { data: { user } } = await supabase.auth.getUser();
 
-            // Allow access to public pages (Login/Signup)
-            if (pathname === '/login' || pathname === '/signup') {
+            // 1. Handle Public Pages (Login)
+            if (pathname === '/login') {
                 if (user) {
-                    // If already logged in, check onboarding status
-                    checkOnboarding(user.id);
+                    // If logged in, decide where to go
+                    await checkOnboarding(user.id);
                 } else {
                     setLoading(false);
                 }
                 return;
             }
 
-            // If not logged in and trying to access private page -> Redirect to Login
+            // 2. Handle Private Pages (Dashboard, Onboarding)
             if (!user) {
                 router.replace('/login');
                 return;
             }
 
-            // 2. Check Onboarding Status
+            // 3. User is logged in -> Check Onboarding
             await checkOnboarding(user.id);
         };
 
         const checkOnboarding = async (userId: string) => {
-            // Check if user has settings (which implies onboarding is done)
-            const { data: settings } = await supabase
+            // We check if the 'settings' row exists for this user.
+            // Using .maybeSingle() is safer than .single() because it returns null instead of erroring if empty.
+            const { data: settings, error } = await supabase
                 .from('settings')
                 .select('user_id')
                 .eq('user_id', userId)
-                .single();
+                .maybeSingle(); 
 
             const isOnboardingPage = pathname === '/onboarding';
 
             if (!settings && !isOnboardingPage) {
-                // If no settings & not on onboarding page -> Go to Onboarding
+                // CASE: New User (No settings) -> trying to access Dashboard
+                // ACTION: Force them to Onboarding
+                console.log("Redirecting to Onboarding...");
                 router.replace('/onboarding');
-            } else if (settings && isOnboardingPage) {
-                // If settings exist & trying to view onboarding -> Go to Dashboard
+            } 
+            else if (settings && isOnboardingPage) {
+                // CASE: Old User (Has settings) -> trying to access Onboarding
+                // ACTION: Force them to Dashboard
+                console.log("Redirecting to Dashboard...");
                 router.replace('/');
-            } else {
+            } 
+            else {
+                // CASE: User is in the right place
                 setLoading(false);
             }
         };
