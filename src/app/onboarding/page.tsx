@@ -1,4 +1,4 @@
-// Force Vercel Rebuild - Attempt 2
+// Force Vercel Rebuild - Fixed Zoho Mapping
 
 'use client';
 
@@ -79,7 +79,11 @@ function OnboardingContent() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return alert("Please log in first");
             
-            const slug = provider.toLowerCase().replace(/\s+/g, '');
+            // --- FIX IS HERE: FORCE "zohobooks" TO BE "zoho" ---
+            let slug = provider.toLowerCase().replace(/\s+/g, '');
+            if (slug === 'zohobooks') slug = 'zoho';
+            
+            // Dynamic URL based on provider
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'}/auth/${slug}/login?user_id=${user.id}`);
             
             if (!res.ok) throw new Error("Provider not yet implemented in backend");
@@ -309,4 +313,4 @@ export default function OnboardingPage() {
             <OnboardingContent />
         </Suspense>
     );
-} 
+}
