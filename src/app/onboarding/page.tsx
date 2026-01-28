@@ -1,5 +1,3 @@
-// Force Vercel Rebuild - Fixed Zoho Mapping
-
 'use client';
 
 import { useState, useEffect, Suspense, ReactNode } from 'react';
@@ -106,8 +104,34 @@ function OnboardingContent() {
         }));
     };
 
-    const saveToSupabase = async (key: string, value: string) => {
-        console.log('Saving to Supabase:', key, value);
+    // --- NEW: FUNCTION TO SAVE COMPLETION STATUS ---
+    const completeOnboarding = async () => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            // 1. Create the Settings Row (This marks the user as "Onboarded")
+            const { error } = await supabase.from('settings').insert({
+                user_id: user.id,
+                business_name: 'My Business', // You can ask for this in a form if you want
+                currency: 'SAR',
+                language: 'en'
+            });
+
+            // If error is duplicate key, it means they are already onboarded, which is fine.
+            if (error && !error.message.includes('duplicate')) {
+                console.error("Save error:", error);
+                alert("Failed to save setup. Please try again.");
+                return;
+            }
+
+            // 2. NOW redirect to Dashboard
+            router.push('/');
+            router.refresh(); // Force refresh to update AuthGuard
+            
+        } catch (e) {
+            console.error(e);
+        }
     };
 
     return (
@@ -277,7 +301,7 @@ function OnboardingContent() {
                     </div>
                 )}
 
-                {/* --- STEP 4: REVIEW --- */}
+                {/* --- STEP 4: REVIEW (UPDATED BUTTON) --- */}
                 {step === 4 && (
                     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <div className="text-center mb-12">
@@ -297,7 +321,9 @@ function OnboardingContent() {
                             </div>
                             <div className="flex items-center justify-between">
                                 <button onClick={() => setStep(3)} className="text-gray-500 hover:text-black">Back</button>
-                                <button onClick={() => router.push('/')} className="px-8 py-4 bg-black text-white rounded-xl font-semibold hover:bg-gray-800">Complete Setup</button>
+                                
+                                {/* --- FIX IS HERE: CALL COMPLETE ONBOARDING --- */}
+                                <button onClick={completeOnboarding} className="px-8 py-4 bg-black text-white rounded-xl font-semibold hover:bg-gray-800">Complete Setup</button>
                             </div>
                         </div>
                     </div>
