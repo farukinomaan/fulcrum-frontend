@@ -43,20 +43,24 @@ interface Activity {
 export default function Home() {
   const router = useRouter();
   const [activeView, setActiveView] = useState<'feed' | 'transactions'>('feed');
-  const [isProfileOpen, setIsProfileOpen] = useState(false); // Dropdown state
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   // Real Data State
   const [activities, setActivities] = useState<Activity[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
 
-  // Stats
+  // Stats & Dynamic Providers
   const [stats, setStats] = useState({
     cash_on_hand: 0,
     burn_rate: 0,
     runway: 0,
     revenue: 0,
-    currency: 'SAR'
+    currency: 'SAR',
+    providers: {
+        accounting: 'Accounting', // Default placeholder
+        banking: 'Bank'
+    }
   });
 
   const [loadingData, setLoadingData] = useState(false);
@@ -100,6 +104,7 @@ export default function Home() {
             setStats(prev => ({
               ...prev,
               ...result.cards,
+              providers: result.providers || { accounting: 'Zoho Books', banking: 'Stripe' }, // Use backend providers or default
               currency: result.cards.currency || 'SAR'
             }));
           }
@@ -150,7 +155,6 @@ export default function Home() {
       setLoadingData(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        // Direct Fetch to ensure robust data loading
         const [invRes, txnRes] = await Promise.all([
              fetch(`${API_URL}/invoices?user_id=${user.id}`).catch(err => null),
              fetch(`${API_URL}/transactions?user_id=${user.id}`).catch(err => null)
@@ -198,8 +202,8 @@ export default function Home() {
       if(result.status === 'error') {
           alert("Sync Failed: " + result.message);
       } else {
-          // Success: Reload data immediately
-          await loadRealData(); 
+          // Trigger a reload of both Stats and Data
+          window.location.reload(); 
       }
 
     } catch (e) {
@@ -246,6 +250,14 @@ export default function Home() {
     });
 
     if (error) alert("Feed Write Error: " + error.message);
+  };
+
+  // Helper for currency formatting
+  const formatMoney = (amount: number) => {
+    return Number(amount).toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
   };
 
   return (
@@ -315,7 +327,6 @@ export default function Home() {
           <div className="flex items-center gap-4 relative">
             <button className="p-2 text-slate-400 hover:text-slate-600 transition-colors relative"><Bell className="w-5 h-5" /></button>
             
-            {/* --- NEW: PROFILE DROPDOWN (Click to open, with Sign Out) --- */}
             <div className="relative">
               <button 
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
@@ -357,12 +368,12 @@ export default function Home() {
                 />
                 <StatCard
                   label="Cash on Hand"
-                  value={`${stats.currency} ${stats.cash_on_hand.toLocaleString()}`}
+                  value={`${stats.currency} ${formatMoney(stats.cash_on_hand)}`}
                   trend="-1.2%"
                 />
                 <StatCard
                   label="Burn Rate"
-                  value={`${stats.currency} ${stats.burn_rate.toLocaleString()}`}
+                  value={`${stats.currency} ${formatMoney(stats.burn_rate)}`}
                   trend="Stable"
                   positive
                 />
@@ -397,11 +408,12 @@ export default function Home() {
               <div className="flex items-center justify-between mb-8">
                 <div>
                   <h2 className="text-2xl font-semibold text-slate-900">Real-Time Data</h2>
-                  <p className="text-sm text-slate-500">Synced from Zoho & Stripe</p>
+                  {/* DYNAMIC PROVIDER NAMES HERE */}
+                  <p className="text-sm text-slate-500">Synced from {stats.providers.accounting} & {stats.providers.banking}</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <button onClick={handleRefresh} disabled={syncing} className="flex items-center gap-2 text-sm px-4 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 disabled:opacity-50 shadow-sm">
-                    <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} /> {syncing ? 'Syncing...' : 'Sync Zoho'}
+                    <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} /> {syncing ? `Sync ${stats.providers.accounting}` : `Sync ${stats.providers.accounting}`}
                   </button>
                   <button onClick={handleReconcile} disabled={reconLoading} className="flex items-center gap-2 text-sm px-4 py-2 rounded-lg bg-black text-white hover:bg-slate-800 disabled:opacity-50 shadow-sm">
                     <RefreshCw className={`w-4 h-4 ${reconLoading ? 'animate-spin' : ''}`} /> {reconLoading ? 'Reconciling...' : 'Reconcile Now'}
@@ -414,19 +426,20 @@ export default function Home() {
               ) : (
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                    <DataMetric label="Total Revenue" value={invoices.reduce((s, i) => s + Number(i.total_amount), 0)} icon={<TrendingUp className="text-green-600" />} />
-                    <DataMetric label="Outstanding" value={invoices.filter(i => i.status !== 'paid').reduce((s, i) => s + Number(i.total_amount), 0)} icon={<Clock className="text-amber-600" />} />
+                    <DataMetric label="Total Revenue" value={formatMoney(invoices.reduce((s, i) => s + Number(i.total_amount), 0))} icon={<TrendingUp className="text-green-600" />} />
+                    <DataMetric label="Outstanding" value={formatMoney(invoices.filter(i => i.status !== 'paid').reduce((s, i) => s + Number(i.total_amount), 0))} icon={<Clock className="text-amber-600" />} />
                     <DataMetric label="Matched" value={`${transactions.filter(t => t.reconciliation_status === 'matched').length}/${transactions.length}`} icon={<DollarSign className="text-blue-600" />} />
                     <DataMetric label="Compliance" value="ZATCA Ready" icon={<ShieldCheck className="text-green-600" />} textOnly />
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                      <div className="px-5 py-4 border-b border-slate-200 flex justify-between bg-slate-50/50">
+                    {/* INVOICE CARD - FIXED HEIGHT */}
+                    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm h-[500px] flex flex-col">
+                      <div className="px-5 py-4 border-b border-slate-200 flex justify-between bg-slate-50/50 shrink-0">
                         <h3 className="font-semibold text-sm">Recent Invoices</h3>
-                        <span className="text-xs text-slate-500">Zoho Books</span>
+                        <span className="text-xs text-slate-500">{stats.providers.accounting}</span>
                       </div>
-                      <div className="divide-y divide-slate-100 max-h-[500px] overflow-auto">
+                      <div className="divide-y divide-slate-100 overflow-auto flex-1">
                         {invoices.length === 0 && <div className="p-10 text-sm text-slate-400 text-center">No invoices found.</div>}
                         {invoices.map(inv => (
                           <div key={inv.id} className="p-4 hover:bg-slate-50 flex justify-between items-center group">
@@ -438,7 +451,7 @@ export default function Home() {
                               <div className="text-xs text-slate-500 mt-0.5">{inv.issue_date}</div>
                             </div>
                             <div className="text-right">
-                              <div className="font-semibold text-slate-900">{Number(inv.total_amount).toLocaleString()}</div>
+                              <div className="font-semibold text-slate-900">{formatMoney(inv.total_amount)}</div>
                               <div className="text-xs text-slate-400">{inv.currency}</div>
                             </div>
                           </div>
@@ -446,12 +459,13 @@ export default function Home() {
                       </div>
                     </div>
 
-                    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                      <div className="px-5 py-4 border-b border-slate-200 flex justify-between bg-slate-50/50">
+                    {/* BANK CARD - FIXED HEIGHT */}
+                    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm h-[500px] flex flex-col">
+                      <div className="px-5 py-4 border-b border-slate-200 flex justify-between bg-slate-50/50 shrink-0">
                         <h3 className="font-semibold text-sm">Bank Activity</h3>
-                        <span className="text-xs text-slate-500">Stripe / Bank</span>
+                        <span className="text-xs text-slate-500">{stats.providers.banking} / Bank</span>
                       </div>
-                      <div className="divide-y divide-slate-100 max-h-[500px] overflow-auto">
+                      <div className="divide-y divide-slate-100 overflow-auto flex-1">
                         {transactions.length === 0 && <div className="p-10 text-sm text-slate-400 text-center">No transactions found.</div>}
                         {transactions.map(txn => (
                           <div key={txn.id} className="p-4 hover:bg-slate-50 flex justify-between items-center">
@@ -465,7 +479,7 @@ export default function Home() {
                             </div>
                             <div className="text-right">
                               <div className={`font-semibold ${Number(txn.amount) > 0 ? 'text-green-600' : 'text-slate-900'}`}>
-                                {Number(txn.amount).toLocaleString()}
+                                {formatMoney(txn.amount)}
                               </div>
                               <div className="text-xs text-slate-400">{txn.transaction_date}</div>
                             </div>
