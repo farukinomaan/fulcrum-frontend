@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense, ReactNode } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
+import Image from 'next/image';
 
 // --- TYPESCRIPT INTERFACES ---
 interface ServiceItem {
@@ -51,7 +52,7 @@ function OnboardingContent() {
         channels: [],
     });
 
-    // --- NEW FIX: Fetch saved progress on mount ---
+    // 1. Fetch saved progress on load
     useEffect(() => {
         const fetchProgress = async () => {
             const { data: { user } } = await supabase.auth.getUser();
@@ -67,19 +68,16 @@ function OnboardingContent() {
                 const updates: any = {};
                 let nextStep = 1;
 
-                // Check Accounting
                 if (settings.accounting_provider && settings.accounting_provider !== 'Not Connected') {
                     updates.accounting = settings.accounting_provider;
-                    nextStep = 2; // Move to Banking
+                    nextStep = 2; // Auto-advance to Banking
                 }
 
-                // Check Banking
                 if (settings.banking_provider && settings.banking_provider !== 'Not Connected') {
                     updates.banking = settings.banking_provider;
-                    nextStep = 3; // Move to Channels
+                    nextStep = 3; // Auto-advance to Channels
                 }
 
-                // Check Channels
                 if (settings.channels && settings.channels.length > 0) {
                     updates.channels = settings.channels;
                 }
@@ -94,18 +92,23 @@ function OnboardingContent() {
         fetchProgress();
     }, [supabase]);
 
-    // --- HANDLE URL CALLBACKS ---
+    // 2. Handle Callback from Backend (Zoho/Xero Redirect)
     useEffect(() => {
         const status = searchParams.get('status');
         const provider = searchParams.get('provider');
 
         if (status === 'connected') {
             const connectedProvider = provider ? decodeURIComponent(provider) : 'Connected Service';
-            
+
+            // Mark as selected
             setSelectedServices(prev => ({ ...prev, accounting: connectedProvider }));
+
+            // FORCE Step 2 immediately
             setStep(2);
+
+            // Clean URL
             router.replace('/onboarding');
-            
+
         } else if (status === 'connected_stripe') {
             setSelectedServices(prev => ({ ...prev, banking: 'Stripe' }));
             setStep(3);
@@ -115,27 +118,35 @@ function OnboardingContent() {
         }
     }, [searchParams, router]);
 
-    const handleOAuthConnect = async (provider: string, type: 'accounting' | 'banking') => {
+    // 3. Initiate Connection (The big black button)
+    const handleConnectClick = async () => {
+        const provider = step === 1 ? selectedServices.accounting : selectedServices.banking;
+        if (!provider) return;
+
         setLoading(provider);
-        
+
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return alert("Please log in first");
-            
+
             let slug = provider.toLowerCase().replace(/\s+/g, '');
             if (slug === 'zohobooks') slug = 'zoho';
-            
+
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'}/auth/${slug}/login?user_id=${user.id}`);
-            
+
             if (!res.ok) throw new Error(`Provider ${provider} not yet implemented`);
-            
+
             const data = await res.json();
-            window.location.href = data.url;
+            window.location.href = data.url; // Redirect to Provider
         } catch (e) {
             console.error(e);
             alert(`${provider} integration is coming next! (Backend pending)`);
             setLoading(null);
         }
+    };
+
+    const handleSelectService = (provider: string, type: 'accounting' | 'banking') => {
+        setSelectedServices(prev => ({ ...prev, [type]: provider }));
     };
 
     const toggleChannel = (channel: string) => {
@@ -164,8 +175,8 @@ function OnboardingContent() {
             }
 
             router.push('/');
-            router.refresh(); 
-            
+            router.refresh();
+
         } catch (e) {
             console.error(e);
             alert("Unexpected error occurred.");
@@ -177,8 +188,10 @@ function OnboardingContent() {
             <div className="max-w-5xl mx-auto">
                 <div className="flex items-center justify-between mb-12">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center">
-                            <span className="text-white font-bold text-xl">F</span>
+                        <div className="flex items-center gap-3">
+                            {/* Replaced 'F' placeholder with Logo */}
+                            <Image src="/logo.png" alt="Fulcrum" width={40} height={40} className="w-10 h-10" />
+                            <h2 className="text-xl font-bold text-black">Fulcrum</h2>
                         </div>
                         <h2 className="text-xl font-bold text-black">Fulcrum</h2>
                     </div>
@@ -208,7 +221,11 @@ function OnboardingContent() {
                         {!selectedServices.accounting ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                                 {accountingServices.map((service) => (
-                                    <button key={service.name} onClick={() => handleOAuthConnect(service.name, 'accounting')} className="group p-6 bg-white border-2 border-gray-200 rounded-2xl hover:border-black hover:shadow-xl transition-all duration-300 text-left">
+                                    <button
+                                        key={service.name}
+                                        onClick={() => handleSelectService(service.name, 'accounting')} // Just Select
+                                        className="group p-6 bg-white border-2 border-gray-200 rounded-2xl hover:border-black hover:shadow-xl transition-all duration-300 text-left"
+                                    >
                                         <div className="flex items-start justify-between mb-4"><div className="text-black bg-gray-50 p-3 rounded-xl group-hover:bg-gray-100 transition-colors">{service.icon}</div></div>
                                         <span className="font-bold text-lg text-black block">{service.name}</span><span className="text-sm text-gray-500">{service.description}</span>
                                     </button>
@@ -216,12 +233,21 @@ function OnboardingContent() {
                             </div>
                         ) : (
                             <div className="max-w-md mx-auto bg-gray-50 p-8 rounded-3xl border-2 border-gray-200 animate-in zoom-in-95 duration-300">
-                                <div className="flex items-center gap-3 mb-6"><button onClick={() => setSelectedServices(prev => ({ ...prev, accounting: null }))} className="text-gray-400 hover:text-black">Back</button><h2 className="text-xl font-bold text-black">Connect {selectedServices.accounting}</h2></div>
+                                <div className="flex items-center gap-3 mb-6">
+                                    <button onClick={() => setSelectedServices(prev => ({ ...prev, accounting: null }))} className="text-gray-400 hover:text-black">Back</button>
+                                    <h2 className="text-xl font-bold text-black">Connect {selectedServices.accounting}</h2>
+                                </div>
                                 {selectedServices.accounting === 'None' ? (
                                     <div className="text-center py-6"><button onClick={() => setStep(2)} className="w-full py-4 bg-black text-white rounded-xl font-bold hover:bg-gray-800 transition-all">Continue to Banking</button></div>
                                 ) : (
                                     <div className="flex flex-col items-center justify-center py-4">
-                                        <button disabled={!!loading} onClick={() => handleOAuthConnect(selectedServices.accounting!, 'accounting')} className="bg-black text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-gray-800 transition-all flex items-center gap-3 w-full justify-center disabled:opacity-50">{loading === selectedServices.accounting ? 'Connecting...' : `Connect ${selectedServices.accounting}`}</button>
+                                        <button
+                                            disabled={!!loading}
+                                            onClick={handleConnectClick} // Actual Connect Action
+                                            className="bg-black text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-gray-800 transition-all flex items-center gap-3 w-full justify-center disabled:opacity-50"
+                                        >
+                                            {loading === selectedServices.accounting ? 'Connecting...' : `Connect ${selectedServices.accounting}`}
+                                        </button>
                                         <p className="mt-4 text-gray-500 text-sm text-center">We'll redirect you to {selectedServices.accounting} to approve access.</p>
                                     </div>
                                 )}
@@ -240,16 +266,29 @@ function OnboardingContent() {
                         {!selectedServices.banking ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                                 {bankingServices.map((service) => (
-                                    <button key={service.name} onClick={() => handleOAuthConnect(service.name, 'banking')} className="group p-6 bg-white border-2 border-gray-200 rounded-2xl hover:border-black hover:shadow-xl transition-all duration-300">
+                                    <button
+                                        key={service.name}
+                                        onClick={() => handleSelectService(service.name, 'banking')} // Just Select
+                                        className="group p-6 bg-white border-2 border-gray-200 rounded-2xl hover:border-black hover:shadow-xl transition-all duration-300"
+                                    >
                                         <div className="flex flex-col items-center justify-center pt-2"><div className="mb-4 transform group-hover:scale-110 transition-transform duration-300">{service.icon}</div><span className="font-bold text-lg text-black">{service.name}</span></div>
                                     </button>
                                 ))}
                             </div>
                         ) : (
                             <div className="max-w-md mx-auto bg-gray-50 p-8 rounded-3xl border-2 border-gray-200">
-                                <div className="flex items-center gap-3 mb-6"><button onClick={() => setSelectedServices(prev => ({ ...prev, banking: null }))} className="text-gray-400 hover:text-black">Back</button><h2 className="text-xl font-bold text-black">{selectedServices.banking} Credentials</h2></div>
+                                <div className="flex items-center gap-3 mb-6">
+                                    <button onClick={() => setSelectedServices(prev => ({ ...prev, banking: null }))} className="text-gray-400 hover:text-black">Back</button>
+                                    <h2 className="text-xl font-bold text-black">{selectedServices.banking} Credentials</h2>
+                                </div>
                                 <div className="flex flex-col items-center justify-center py-4">
-                                    <button disabled={!!loading} onClick={() => handleOAuthConnect(selectedServices.banking!, 'banking')} className="bg-black text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-gray-800 transition-all flex items-center gap-3 w-full justify-center disabled:opacity-50">{loading === selectedServices.banking ? 'Connecting...' : `Connect ${selectedServices.banking}`}</button>
+                                    <button
+                                        disabled={!!loading}
+                                        onClick={handleConnectClick} // Actual Connect Action
+                                        className="bg-black text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-gray-800 transition-all flex items-center gap-3 w-full justify-center disabled:opacity-50"
+                                    >
+                                        {loading === selectedServices.banking ? 'Connecting...' : `Connect ${selectedServices.banking}`}
+                                    </button>
                                     <p className="mt-4 text-gray-500 text-sm text-center">We'll redirect you to {selectedServices.banking} to approve access.</p>
                                 </div>
                             </div>

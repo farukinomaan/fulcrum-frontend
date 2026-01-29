@@ -115,7 +115,7 @@ export default function SettingsPage() {
       <aside className="w-64 bg-white border-r border-slate-200 flex-col hidden md:flex fixed h-full z-10">
         <div className="p-6 border-b border-slate-100">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigateTo('/')}>
-            <Image src="/logo.svg" alt="Fulcrum Logo" width={32} height={32} className="w-8 h-8" />
+            <Image src="/logo.png" alt="Fulcrum Logo" width={32} height={32} className="w-8 h-8" />
             <span className="font-semibold text-lg tracking-tight">Fulcrum</span>
           </div>
         </div>
