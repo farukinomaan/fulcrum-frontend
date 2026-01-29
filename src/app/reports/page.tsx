@@ -102,7 +102,7 @@ export default function ReportsPage() {
         <div className="p-6 border-b border-slate-100">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => router.push('/')}>
             {/* LOGO REPLACEMENT */}
-            <Image src="/logo.svg" alt="Fulcrum Logo" width={32} height={32} className="w-8 h-8" />
+            <Image src="/logo.png" alt="Fulcrum Logo" width={32} height={32} className="w-8 h-8" />
             <span className="font-semibold text-lg tracking-tight">Fulcrum</span>
           </div>
         </div>
