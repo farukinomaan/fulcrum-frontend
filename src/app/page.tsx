@@ -9,7 +9,7 @@ import {
   ShieldCheck, Settings, LogOut, User
 } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation'; // <--- Added useSearchParams
 import { api } from '@/lib/api'; 
 
 // --- TYPES ---
@@ -43,7 +43,12 @@ interface Activity {
 
 export default function Home() {
   const router = useRouter();
-  const [activeView, setActiveView] = useState<'feed' | 'transactions'>('feed');
+  const searchParams = useSearchParams(); // <--- Capture URL params
+  
+  // FIX 1: Initialize view based on URL param (enables linking from Chat)
+  const initialView = searchParams.get('view') === 'transactions' ? 'transactions' : 'feed';
+  const [activeView, setActiveView] = useState<'feed' | 'transactions'>(initialView);
+  
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   // Real Data State
@@ -73,49 +78,58 @@ export default function Home() {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
   // --- 1. FETCH LIVE FEED & STATS ---
+  // Moved to a function so we can call it on Sync without reloading
+  const fetchDashboardData = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // A. Fetch Activities
+    const { data } = await supabase
+      .from('activities')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (data) {
+      setActivities(data.map((item: any) => ({
+        ...item,
+        timestamp: new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        actionLabel: item.action_label
+      })));
+    }
+
+    // B. Fetch Dashboard Stats
+    try {
+      const response = await fetch(`${API_URL}/dashboard/stats?user_id=${user.id}`);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.cards) {
+          setStats(prev => ({
+            ...prev,
+            ...result.cards,
+            providers: result.providers || { accounting: 'Zoho Books', banking: 'Stripe' },
+            currency: result.cards.currency || 'SAR'
+          }));
+        }
+      }
+    } catch (e) {
+      console.error("Failed to fetch dashboard stats", e);
+    }
+  };
+
   useEffect(() => {
     let channel: any;
+    
+    // Initial Fetch
+    fetchDashboardData();
 
-    const fetchInitialData = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // A. Fetch Activities
-      const { data } = await supabase
-        .from('activities')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(20);
-
-      if (data) {
-        setActivities(data.map((item: any) => ({
-          ...item,
-          timestamp: new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          actionLabel: item.action_label
-        })));
-      }
-
-      // B. Fetch Dashboard Stats
-      try {
-        const response = await fetch(`${API_URL}/dashboard/stats?user_id=${user.id}`);
-        if (response.ok) {
-          const result = await response.json();
-          if (result.cards) {
-            setStats(prev => ({
-              ...prev,
-              ...result.cards,
-              providers: result.providers || { accounting: 'Zoho Books', banking: 'Stripe' },
-              currency: result.cards.currency || 'SAR'
-            }));
-          }
-        }
-      } catch (e) {
-        console.error("Failed to fetch dashboard stats", e);
-      }
-
-      // C. Realtime Subscription
-      channel = supabase
+    // C. Realtime Subscription
+    const setupRealtime = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if(!user) return;
+        
+        channel = supabase
         .channel(`activities-feed-${user.id}`)
         .on(
           'postgres_changes',
@@ -135,9 +149,8 @@ export default function Home() {
           }
         )
         .subscribe();
-    };
-
-    fetchInitialData();
+    }
+    setupRealtime();
 
     return () => {
       if (channel) supabase.removeChannel(channel);
@@ -203,7 +216,11 @@ export default function Home() {
       if(result.status === 'error') {
           alert("Sync Failed: " + result.message);
       } else {
-          window.location.reload(); 
+          // FIX 2: Do NOT reload page. Just re-fetch data to keep current view.
+          await fetchDashboardData(); 
+          if (activeView === 'transactions') {
+              await loadRealData();
+          }
       }
 
     } catch (e) {
@@ -236,20 +253,11 @@ export default function Home() {
     router.push('/login');
   };
 
-  const handleTestFeed = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { error } = await supabase.from('activities').insert({
-      user_id: user.id,
-      type: 'anomaly',
-      source: 'System Test',
-      title: 'Test Notification',
-      description: 'This is a test to verify the Live Feed is working.',
-      action_label: 'Dismiss'
-    });
-
-    if (error) alert("Feed Write Error: " + error.message);
+  // FIX 3: Helper to switch views and update URL without reloading
+  const handleViewChange = (view: 'feed' | 'transactions') => {
+    setActiveView(view);
+    const newUrl = view === 'transactions' ? '/?view=transactions' : '/';
+    window.history.pushState({}, '', newUrl);
   };
 
   const formatMoney = (amount: number) => {
@@ -266,24 +274,24 @@ export default function Home() {
       <div className="w-64 bg-white border-r border-slate-200 hidden md:flex flex-col fixed h-full z-20">
         <div className="p-6 border-b border-slate-100">
           <div className="flex items-center gap-3">
-            {/* LOGO REPLACEMENT HERE */}
             <Image src="/logo.png" alt="Fulcrum Logo" width={32} height={32} className="w-8 h-8" />
             <span className="font-semibold text-lg tracking-tight">Fulcrum</span>
           </div>
         </div>
 
         <nav className="flex-1 p-4 space-y-1">
+          {/* FIX 4: Use handleViewChange instead of simple state set */}
           <NavItem
             icon={<ActivityIcon />}
             label="Live Feed"
             active={activeView === 'feed'}
-            onClick={() => setActiveView('feed')}
+            onClick={() => handleViewChange('feed')}
           />
           <NavItem
             icon={<CreditCard />}
             label="Transactions"
             active={activeView === 'transactions'}
-            onClick={() => setActiveView('transactions')}
+            onClick={() => handleViewChange('transactions')}
           />
           <NavItem
             icon={<FileText />}
@@ -300,8 +308,7 @@ export default function Home() {
         <div className="pt-4 mt-4 border-t border-slate-100">
           <NavItem icon={<Settings />} label="Settings" onClick={() => router.push('/settings')} />
         </div>
-
-        {/* Removed "Sarah Jenkins" Partner Section */}
+        {/* Sarah Jenkins section removed as requested */}
       </div>
 
       {/* MAIN CONTENT */}
@@ -375,7 +382,7 @@ export default function Home() {
                     <ActivityIcon className="w-5 h-5" /> Activity Stream
                   </h3>
                   <div className="flex items-center gap-2">
-                    {/* Removed Test Feed Button */}
+                    {/* FIX 5: Removed Test Feed Button */}
                     <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded border border-emerald-100">Live</span>
                   </div>
                 </div>
@@ -397,7 +404,6 @@ export default function Home() {
               <div className="flex items-center justify-between mb-8">
                 <div>
                   <h2 className="text-2xl font-semibold text-slate-900">Real-Time Data</h2>
-                  {/* DYNAMIC PROVIDER NAMES HERE */}
                   <p className="text-sm text-slate-500">Synced from {stats.providers.accounting} & {stats.providers.banking}</p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -415,14 +421,16 @@ export default function Home() {
               ) : (
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-                    {/* FIXED: Dynamic Currency & Correct Logic (Paid Only) */}
+                    {/* FIX 6: Updated Logic & Dynamic Currency */}
+                    
+                    {/* Revenue = Only PAID invoices */}
                     <DataMetric 
                         label="Total Revenue" 
                         value={`${stats.currency} ${formatMoney(invoices.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.total_amount), 0))}`} 
                         icon={<TrendingUp className="text-green-600" />} 
                     />
                     
-                    {/* FIXED: Dynamic Currency & Correct Logic (Unpaid Only) */}
+                    {/* Outstanding = Only UNPAID invoices */}
                     <DataMetric 
                         label="Outstanding" 
                         value={`${stats.currency} ${formatMoney(invoices.filter(i => i.status !== 'paid').reduce((s, i) => s + Number(i.total_amount), 0))}`} 
@@ -434,11 +442,12 @@ export default function Home() {
                         value={`${transactions.filter(t => t.reconciliation_status === 'matched').length}/${transactions.length}`} 
                         icon={<DollarSign className="text-blue-600" />} 
                     />
-                    {/* Removed Compliance Metric */}
+                    
+                    {/* Removed ZATCA Compliance Metric */}
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* INVOICE CARD - FIXED HEIGHT */}
+                    {/* INVOICE CARD */}
                     <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm h-[500px] flex flex-col">
                       <div className="px-5 py-4 border-b border-slate-200 flex justify-between bg-slate-50/50 shrink-0">
                         <h3 className="font-semibold text-sm">Recent Invoices</h3>
@@ -457,7 +466,6 @@ export default function Home() {
                             </div>
                             <div className="text-right">
                               <div className="font-semibold text-slate-900">{formatMoney(inv.total_amount)}</div>
-                              {/* Invoice specific currency comes from DB, stats.currency is global default */}
                               <div className="text-xs text-slate-400">{inv.currency}</div>
                             </div>
                           </div>
@@ -465,7 +473,7 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {/* BANK CARD - FIXED HEIGHT */}
+                    {/* BANK CARD */}
                     <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm h-[500px] flex flex-col">
                       <div className="px-5 py-4 border-b border-slate-200 flex justify-between bg-slate-50/50 shrink-0">
                         <h3 className="font-semibold text-sm">Bank Activity</h3>
