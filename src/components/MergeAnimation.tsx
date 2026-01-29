@@ -125,10 +125,14 @@ export default function MergeAnimation() {
 
         {/* --- 3. CENTER HUB (Fixed) --- */}
         <g>
+          {/* Outer glow rings */}
           <circle cx={centerX} cy={centerY} r="50" stroke="#3b82f6" strokeWidth="1" fill="none" opacity="0.2" />
           <circle cx={centerX} cy={centerY} r="65" stroke="#3b82f6" strokeWidth="1" fill="none" opacity="0.1" />
-          <circle cx={centerX} cy={centerY} r="40" fill="#0f172a" stroke="#3b82f6" strokeWidth="4" />
-          {/* Logo is centered (40x40 size, so offset by 20) */}
+          
+          {/* Main Background Circle: Changed from Dark Slate to White */}
+          <circle cx={centerX} cy={centerY} r="40" fill="#ffffff" stroke="#3b82f6" strokeWidth="4" />
+          
+          {/* Logo */}
           <image href="/logo.png" x={centerX - 20} y={centerY - 20} width="40" height="40" />
         </g>
 
