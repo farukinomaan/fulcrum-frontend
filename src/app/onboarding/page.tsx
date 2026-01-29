@@ -51,20 +51,59 @@ function OnboardingContent() {
         channels: [],
     });
 
+    // --- NEW FIX: Fetch saved progress on mount ---
+    useEffect(() => {
+        const fetchProgress = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const { data: settings } = await supabase
+                .from('settings')
+                .select('*')
+                .eq('user_id', user.id)
+                .single();
+
+            if (settings) {
+                const updates: any = {};
+                let nextStep = 1;
+
+                // Check Accounting
+                if (settings.accounting_provider && settings.accounting_provider !== 'Not Connected') {
+                    updates.accounting = settings.accounting_provider;
+                    nextStep = 2; // Move to Banking
+                }
+
+                // Check Banking
+                if (settings.banking_provider && settings.banking_provider !== 'Not Connected') {
+                    updates.banking = settings.banking_provider;
+                    nextStep = 3; // Move to Channels
+                }
+
+                // Check Channels
+                if (settings.channels && settings.channels.length > 0) {
+                    updates.channels = settings.channels;
+                }
+
+                if (Object.keys(updates).length > 0) {
+                    setSelectedServices(prev => ({ ...prev, ...updates }));
+                    setStep(current => Math.max(current, nextStep));
+                }
+            }
+        };
+
+        fetchProgress();
+    }, [supabase]);
+
+    // --- HANDLE URL CALLBACKS ---
     useEffect(() => {
         const status = searchParams.get('status');
-        const provider = searchParams.get('provider'); // Capture provider name
+        const provider = searchParams.get('provider');
 
         if (status === 'connected') {
-            // FIX: Use the provider from the URL, or fallback to generic
             const connectedProvider = provider ? decodeURIComponent(provider) : 'Connected Service';
             
-            setSelectedServices(prev => ({ 
-                ...prev, 
-                accounting: connectedProvider 
-            }));
-            
-            setStep(2); // FORCE Step 2
+            setSelectedServices(prev => ({ ...prev, accounting: connectedProvider }));
+            setStep(2);
             router.replace('/onboarding');
             
         } else if (status === 'connected_stripe') {
@@ -78,17 +117,14 @@ function OnboardingContent() {
 
     const handleOAuthConnect = async (provider: string, type: 'accounting' | 'banking') => {
         setLoading(provider);
-        setSelectedServices(prev => ({ ...prev, [type]: provider })); // Optimistic update
         
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return alert("Please log in first");
             
-            // Standardize Slug
             let slug = provider.toLowerCase().replace(/\s+/g, '');
             if (slug === 'zohobooks') slug = 'zoho';
             
-            // NOTE: Ensure 'quickbooks' and 'freshbooks' are lowercased correctly
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'}/auth/${slug}/login?user_id=${user.id}`);
             
             if (!res.ok) throw new Error(`Provider ${provider} not yet implemented`);
@@ -118,9 +154,6 @@ function OnboardingContent() {
 
             const { error } = await supabase.from('settings').upsert({
                 user_id: user.id,
-                business_name: 'My Business', 
-                currency: 'SAR',
-                language: 'en',
                 channels: selectedServices.channels
             }, { onConflict: 'user_id' });
 
