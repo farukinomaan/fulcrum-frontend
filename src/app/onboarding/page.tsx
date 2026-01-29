@@ -188,12 +188,9 @@ function OnboardingContent() {
             <div className="max-w-5xl mx-auto">
                 <div className="flex items-center justify-between mb-12">
                     <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-3">
                             {/* Replaced 'F' placeholder with Logo */}
                             <Image src="/logo.png" alt="Fulcrum" width={40} height={40} className="w-10 h-10" />
                             <h2 className="text-xl font-bold text-black">Fulcrum</h2>
-                        </div>
-                        <h2 className="text-xl font-bold text-black">Fulcrum</h2>
                     </div>
                     <div className="text-sm text-gray-500">Step {step} of 4</div>
                 </div>
