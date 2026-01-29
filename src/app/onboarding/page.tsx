@@ -13,10 +13,10 @@ interface ServiceItem {
 
 // --- STATIC DATA ---
 const accountingServices: ServiceItem[] = [
-    { name: 'Zoho Books', description: 'Best for automation', icon: <svg className="w-8 h-8" viewBox="0 0 24 24" fill="currentColor"><path d="M2 3h20v18H2V3zm2 2v14h16V5H4zm2 2h12v2H6V7zm0 4h12v2H6v-2zm0 4h8v2H6v-2z" /></svg> },
-    { name: 'Xero', description: 'Cloud accounting', icon: <svg className="w-8 h-8" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" /></svg> },
-    { name: 'QuickBooks', description: 'Industry standard', icon: <svg className="w-8 h-8" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14h-2v-4H8V7h6v10z" /></svg> },
-    { name: 'FreshBooks', description: 'For freelancers', icon: <svg className="w-8 h-8" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" /></svg> },
+    { name: 'Zoho Books', description: 'Best for automation', icon: <svg className="w-8 h-8 text-[#0069D9]" viewBox="0 0 24 24" fill="currentColor"><path d="M2 3h20v18H2V3zm2 2v14h16V5H4zm2 2h12v2H6V7zm0 4h12v2H6v-2zm0 4h8v2H6v-2z" /></svg> },
+    { name: 'Xero', description: 'Cloud accounting', icon: <svg className="w-8 h-8 text-[#13B5EA]" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" /></svg> },
+    { name: 'QuickBooks', description: 'Industry standard', icon: <svg className="w-8 h-8 text-[#2CA01C]" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14h-2v-4H8V7h6v10z" /></svg> },
+    { name: 'FreshBooks', description: 'For freelancers', icon: <svg className="w-8 h-8 text-[#0075DD]" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" /></svg> },
     { name: 'None', description: 'I use spreadsheets', icon: <svg className="w-8 h-8 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg> }
 ];
 
@@ -31,9 +31,6 @@ const bankingServices: ServiceItem[] = [
 
 const channelServices: ServiceItem[] = [
     { name: 'WhatsApp', icon: <svg className="w-8 h-8" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" /></svg> },
-    { name: 'Slack', icon: <svg className="w-8 h-8" viewBox="0 0 24 24" fill="currentColor"><path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zm1.271 0a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zm0 1.271a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zm10.122 2.521a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zm-1.268 0a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zm-2.523 10.122a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zm0-1.268a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z" /></svg> },
-    { name: 'Email', icon: <svg className="w-8 h-8" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" /></svg> },
-    { name: 'SMS', icon: <svg className="w-8 h-8" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM9 11H7V9h2v2zm4 0h-2V9h2v2zm4 0h-2V9h2v2z" /></svg> }
 ];
 
 function OnboardingContent() {
@@ -56,12 +53,20 @@ function OnboardingContent() {
 
     useEffect(() => {
         const status = searchParams.get('status');
+        const provider = searchParams.get('provider'); // Capture provider name
+
         if (status === 'connected') {
-            // Check if user clicked Xero or Zoho before
-            // For now, we just assume they are continuing
-            setSelectedServices(prev => ({ ...prev, accounting: prev.accounting || 'Connected Service' }));
-            setStep(2);
+            // FIX: Use the provider from the URL, or fallback to generic
+            const connectedProvider = provider ? decodeURIComponent(provider) : 'Connected Service';
+            
+            setSelectedServices(prev => ({ 
+                ...prev, 
+                accounting: connectedProvider 
+            }));
+            
+            setStep(2); // FORCE Step 2
             router.replace('/onboarding');
+            
         } else if (status === 'connected_stripe') {
             setSelectedServices(prev => ({ ...prev, banking: 'Stripe' }));
             setStep(3);
@@ -83,6 +88,7 @@ function OnboardingContent() {
             let slug = provider.toLowerCase().replace(/\s+/g, '');
             if (slug === 'zohobooks') slug = 'zoho';
             
+            // NOTE: Ensure 'quickbooks' and 'freshbooks' are lowercased correctly
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'}/auth/${slug}/login?user_id=${user.id}`);
             
             if (!res.ok) throw new Error(`Provider ${provider} not yet implemented`);
@@ -169,7 +175,7 @@ function OnboardingContent() {
                         {!selectedServices.accounting ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                                 {accountingServices.map((service) => (
-                                    <button key={service.name} onClick={() => setSelectedServices(prev => ({ ...prev, accounting: service.name }))} className="group p-6 bg-white border-2 border-gray-200 rounded-2xl hover:border-black hover:shadow-xl transition-all duration-300 text-left">
+                                    <button key={service.name} onClick={() => handleOAuthConnect(service.name, 'accounting')} className="group p-6 bg-white border-2 border-gray-200 rounded-2xl hover:border-black hover:shadow-xl transition-all duration-300 text-left">
                                         <div className="flex items-start justify-between mb-4"><div className="text-black bg-gray-50 p-3 rounded-xl group-hover:bg-gray-100 transition-colors">{service.icon}</div></div>
                                         <span className="font-bold text-lg text-black block">{service.name}</span><span className="text-sm text-gray-500">{service.description}</span>
                                     </button>
@@ -201,7 +207,7 @@ function OnboardingContent() {
                         {!selectedServices.banking ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                                 {bankingServices.map((service) => (
-                                    <button key={service.name} onClick={() => setSelectedServices(prev => ({ ...prev, banking: service.name }))} className="group p-6 bg-white border-2 border-gray-200 rounded-2xl hover:border-black hover:shadow-xl transition-all duration-300">
+                                    <button key={service.name} onClick={() => handleOAuthConnect(service.name, 'banking')} className="group p-6 bg-white border-2 border-gray-200 rounded-2xl hover:border-black hover:shadow-xl transition-all duration-300">
                                         <div className="flex flex-col items-center justify-center pt-2"><div className="mb-4 transform group-hover:scale-110 transition-transform duration-300">{service.icon}</div><span className="font-bold text-lg text-black">{service.name}</span></div>
                                     </button>
                                 ))}

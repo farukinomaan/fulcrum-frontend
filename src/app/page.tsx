@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image'; // <--- Added Image Import
 import {
   Send, Bell, CheckCircle2, AlertCircle, Clock,
   TrendingUp, MessageSquare, Activity as ActivityIcon,
@@ -58,7 +59,7 @@ export default function Home() {
     revenue: 0,
     currency: 'SAR',
     providers: {
-        accounting: 'Accounting', // Default placeholder
+        accounting: 'Accounting', 
         banking: 'Bank'
     }
   });
@@ -104,7 +105,7 @@ export default function Home() {
             setStats(prev => ({
               ...prev,
               ...result.cards,
-              providers: result.providers || { accounting: 'Zoho Books', banking: 'Stripe' }, // Use backend providers or default
+              providers: result.providers || { accounting: 'Zoho Books', banking: 'Stripe' },
               currency: result.cards.currency || 'SAR'
             }));
           }
@@ -202,7 +203,6 @@ export default function Home() {
       if(result.status === 'error') {
           alert("Sync Failed: " + result.message);
       } else {
-          // Trigger a reload of both Stats and Data
           window.location.reload(); 
       }
 
@@ -252,7 +252,6 @@ export default function Home() {
     if (error) alert("Feed Write Error: " + error.message);
   };
 
-  // Helper for currency formatting
   const formatMoney = (amount: number) => {
     return Number(amount).toLocaleString('en-US', {
         minimumFractionDigits: 2,
@@ -266,8 +265,9 @@ export default function Home() {
       {/* SIDEBAR */}
       <div className="w-64 bg-white border-r border-slate-200 hidden md:flex flex-col fixed h-full z-20">
         <div className="p-6 border-b border-slate-100">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white font-bold">F</div>
+          <div className="flex items-center gap-3">
+            {/* LOGO REPLACEMENT HERE */}
+            <Image src="public/logo.png" alt="Fulcrum Logo" width={32} height={32} className="w-8 h-8" />
             <span className="font-semibold text-lg tracking-tight">Fulcrum</span>
           </div>
         </div>

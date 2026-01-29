@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image'; // <--- Added Image Import
 import { createClient } from '@/utils/supabase/client'; 
 import MergeAnimation from '@/components/MergeAnimation';
 
@@ -35,7 +36,8 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="absolute top-8 left-8">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white font-bold text-lg">F</div>
+            {/* LOGO REPLACEMENT HERE */}
+            <Image src="/logo.png" alt="Fulcrum Logo" width={32} height={32} className="w-8 h-8" />
             <span className="font-semibold text-xl tracking-tight text-slate-900">Fulcrum</span>
           </div>
         </div>
