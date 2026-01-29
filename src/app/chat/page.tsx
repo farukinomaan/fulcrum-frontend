@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import Image from 'next/image'; // <--- Added Image Import
 import { 
   Send, Bot, User, ArrowLeft, 
   Sparkles, Activity as ActivityIcon, 
@@ -22,12 +23,16 @@ export default function ChatPage() {
   const router = useRouter();
   const supabase = createClient();
   
+  // --- CRITICAL FIX: Use Dynamic API URL ---
+  // This connects to Render in production, ensuring the AI doesn't get stuck on "Typing..."
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+  
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
       role: 'assistant',
-      content: "Hello! I'm Fulcrum AI. I can analyze your Zoho invoices, Stripe transactions, and runway. What would you like to know?",
+      content: "Hello! I'm Fulcrum AI. I can analyze your invoices, transactions, and runway. What would you like to know?",
       timestamp: new Date()
     }
   ]);
@@ -61,7 +66,6 @@ export default function ChatPage() {
     
     setMessages(prev => [...prev, userMsg]);
     setInput('');
-    // Reset height immediately after sending
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
     
     setIsTyping(true);
@@ -73,7 +77,8 @@ export default function ChatPage() {
         throw new Error("You must be logged in to use Fulcrum AI.");
       }
 
-      const response = await fetch('http://localhost:8000/agent/chat', {
+      // --- FIX: Use the variable here instead of hardcoded localhost ---
+      const response = await fetch(`${API_URL}/agent/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -81,6 +86,10 @@ export default function ChatPage() {
           query: userText
         })
       });
+
+      if (!response.ok) {
+        throw new Error(`Server Error: ${response.status}`);
+      }
 
       const data = await response.json();
 
@@ -98,7 +107,7 @@ export default function ChatPage() {
       const errorMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: `Error: ${error.message || "Failed to connect to the Financial Agent."}`,
+        content: `Connection Error: ${error.message || "Is the backend running?"}`,
         timestamp: new Date()
       };
       setMessages(prev => [...prev, errorMsg]);
@@ -120,8 +129,9 @@ export default function ChatPage() {
       {/* --- SIDEBAR --- */}
       <div className="w-64 bg-white border-r border-slate-200 flex-col hidden md:flex">
         <div className="p-6 border-b border-slate-100">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => router.push('/')}>
-            <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white font-bold">F</div>
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => router.push('/')}>
+            {/* --- LOGO REPLACEMENT HERE --- */}
+            <Image src="/logo.png" alt="Fulcrum Logo" width={32} height={32} className="w-8 h-8" />
             <span className="font-semibold text-lg tracking-tight">Fulcrum</span>
           </div>
         </div>
@@ -202,9 +212,8 @@ export default function ChatPage() {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* COMPACT INPUT AREA (FIXED WIDTH INCREASED) */}
+        {/* INPUT AREA */}
         <div className="p-6 bg-white border-t border-slate-200 shrink-0">
-          {/* UPDATED: Changed max-w-3xl to max-w-5xl for wider input */}
           <div className="max-w-5xl mx-auto relative flex items-end gap-2 bg-slate-50 border border-slate-200 rounded-xl p-2 shadow-sm focus-within:ring-2 focus-within:ring-black transition-all">
             <textarea
               ref={textareaRef}
@@ -212,8 +221,6 @@ export default function ChatPage() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Ask about revenue..."
-              // FIX: Reduced min-height to 52px (Standard Size)
-              // Added overflow-hidden to prevent manual scrollbar appearing unnecessarily
               className="w-full bg-transparent border-none outline-none text-sm resize-none max-h-48 min-h-[52px] py-3 pl-3 overflow-hidden"
               rows={1}
             />
@@ -235,7 +242,6 @@ export default function ChatPage() {
   );
 }
 
-// Helper Component for Sidebar Items
 function NavItem({ icon, label, active = false, onClick }: { icon: any, label: string, active?: boolean, onClick?: () => void }) {
   return (
     <button 
