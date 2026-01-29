@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Image from 'next/image'; // <--- Added Image Import
+import Image from 'next/image'; 
 import {
   Send, Bell, CheckCircle2, AlertCircle, Clock,
   TrendingUp, MessageSquare, Activity as ActivityIcon,
@@ -301,18 +301,7 @@ export default function Home() {
           <NavItem icon={<Settings />} label="Settings" onClick={() => router.push('/settings')} />
         </div>
 
-        <div className="p-4 border-t border-slate-100">
-          <div className="bg-slate-900 rounded-xl p-4 text-white">
-            <div className="text-xs text-slate-400 uppercase font-semibold mb-1">Your Partner</div>
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-xs font-bold">SJ</div>
-              <div>
-                <div className="text-sm font-medium">Sarah Jenkins</div>
-                <div className="text-xs text-slate-400">Accountant</div>
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* Removed "Sarah Jenkins" Partner Section */}
       </div>
 
       {/* MAIN CONTENT */}
@@ -386,7 +375,7 @@ export default function Home() {
                     <ActivityIcon className="w-5 h-5" /> Activity Stream
                   </h3>
                   <div className="flex items-center gap-2">
-                    <button onClick={handleTestFeed} className="text-xs font-medium text-slate-500 bg-white border border-slate-200 px-2 py-1 rounded hover:bg-slate-50">Test Feed</button>
+                    {/* Removed Test Feed Button */}
                     <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded border border-emerald-100">Live</span>
                   </div>
                 </div>
@@ -425,11 +414,27 @@ export default function Home() {
                 <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-8 w-8 border-2 border-slate-300 border-t-black"></div></div>
               ) : (
                 <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                    <DataMetric label="Total Revenue" value={formatMoney(invoices.reduce((s, i) => s + Number(i.total_amount), 0))} icon={<TrendingUp className="text-green-600" />} />
-                    <DataMetric label="Outstanding" value={formatMoney(invoices.filter(i => i.status !== 'paid').reduce((s, i) => s + Number(i.total_amount), 0))} icon={<Clock className="text-amber-600" />} />
-                    <DataMetric label="Matched" value={`${transactions.filter(t => t.reconciliation_status === 'matched').length}/${transactions.length}`} icon={<DollarSign className="text-blue-600" />} />
-                    <DataMetric label="Compliance" value="ZATCA Ready" icon={<ShieldCheck className="text-green-600" />} textOnly />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+                    {/* FIXED: Dynamic Currency & Correct Logic (Paid Only) */}
+                    <DataMetric 
+                        label="Total Revenue" 
+                        value={`${stats.currency} ${formatMoney(invoices.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.total_amount), 0))}`} 
+                        icon={<TrendingUp className="text-green-600" />} 
+                    />
+                    
+                    {/* FIXED: Dynamic Currency & Correct Logic (Unpaid Only) */}
+                    <DataMetric 
+                        label="Outstanding" 
+                        value={`${stats.currency} ${formatMoney(invoices.filter(i => i.status !== 'paid').reduce((s, i) => s + Number(i.total_amount), 0))}`} 
+                        icon={<Clock className="text-amber-600" />} 
+                    />
+                    
+                    <DataMetric 
+                        label="Matched" 
+                        value={`${transactions.filter(t => t.reconciliation_status === 'matched').length}/${transactions.length}`} 
+                        icon={<DollarSign className="text-blue-600" />} 
+                    />
+                    {/* Removed Compliance Metric */}
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -452,6 +457,7 @@ export default function Home() {
                             </div>
                             <div className="text-right">
                               <div className="font-semibold text-slate-900">{formatMoney(inv.total_amount)}</div>
+                              {/* Invoice specific currency comes from DB, stats.currency is global default */}
                               <div className="text-xs text-slate-400">{inv.currency}</div>
                             </div>
                           </div>

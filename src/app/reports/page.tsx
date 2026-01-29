@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import Image from 'next/image'; // <--- Added Image Import
 import { 
   FileText, Download, TrendingUp, TrendingDown, 
-  Calendar, ChevronRight, Activity, CreditCard, MessageSquare, CheckCircle2
+  Calendar, ChevronRight, Activity, CreditCard, MessageSquare, CheckCircle2,
+  Settings, LogOut // <--- Added Settings Import
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
@@ -12,14 +14,19 @@ export default function ReportsPage() {
   const router = useRouter();
   const supabase = createClient();
   
-  const [generating, setGenerating] = useState(false);
+  // --- FIX: Dynamic API URL ---
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
   
-  // Initialize with placeholders so the UI isn't empty
+  const [generating, setGenerating] = useState(false);
+  const [currency, setCurrency] = useState('SAR'); // Default currency, will update on load
+  
+  // Initialize with placeholders
   const [reportData, setReportData] = useState({
     month: "Current Period",
     revenue: 0,
     expenses: 0,
     net_income: 0,
+    currency: 'SAR', // Added currency to report data
     ai_insights: {
         headline: "Ready to Generate",
         summary: "Click the generate button to analyze your latest financial data using Fulcrum AI.",
@@ -27,56 +34,90 @@ export default function ReportsPage() {
     }
   });
 
+  // Fetch User Preferences (Currency) on Load
+  useEffect(() => {
+    const fetchSettings = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            const { data } = await supabase
+                .from('settings')
+                .select('currency')
+                .eq('user_id', user.id)
+                .single();
+            if (data?.currency) {
+                setCurrency(data.currency);
+                setReportData(prev => ({ ...prev, currency: data.currency }));
+            }
+        }
+    };
+    fetchSettings();
+  }, []);
+
   const handleGenerate = async () => {
     setGenerating(true);
     
     try {
-        // 1. Get User
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
             router.push('/login');
             return;
         }
 
-        // 2. Call Python Backend
-        const response = await fetch('http://localhost:8000/reports/generate', {
+        // --- FIX: Use Dynamic API URL ---
+        const response = await fetch(`${API_URL}/reports/generate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_id: user.id })
         });
 
+        if (!response.ok) throw new Error("Backend generation failed");
+
         const data = await response.json();
         
-        // 3. Update UI with Real Data
+        // Update UI with Real Data
         if (data.revenue !== undefined) {
-            setReportData(data);
+            setReportData({
+                ...data,
+                currency: data.currency || currency // Use backend currency if provided, else fallback
+            });
         }
 
     } catch (error) {
         console.error("Report Generation Error:", error);
-        alert("Failed to generate report. Is the backend running?");
+        alert("Failed to generate report. Make sure the backend is connected.");
     } finally {
         setGenerating(false);
     }
   };
 
+  const formatMoney = (amount: number) => {
+    return amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 flex">
       
-      {/* SIDEBAR */}
+      {/* SIDEBAR - Matched with Dashboard */}
       <aside className="w-64 bg-white border-r border-slate-200 flex-col hidden md:flex fixed h-full z-10">
         <div className="p-6 border-b border-slate-100">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => router.push('/')}>
-            <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white font-bold">F</div>
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => router.push('/')}>
+            {/* LOGO REPLACEMENT */}
+            <Image src="/logo.svg" alt="Fulcrum Logo" width={32} height={32} className="w-8 h-8" />
             <span className="font-semibold text-lg tracking-tight">Fulcrum</span>
           </div>
         </div>
+        
         <nav className="flex-1 p-4 space-y-1">
           <NavItem icon={<Activity />} label="Live Feed" onClick={() => router.push('/')} />
           <NavItem icon={<CreditCard />} label="Transactions" onClick={() => router.push('/')} />
           <NavItem icon={<FileText />} label="Reports" active />
           <NavItem icon={<MessageSquare />} label="Ask Fulcrum" onClick={() => router.push('/chat')} />
         </nav>
+
+        {/* SETTINGS LINK ADDED */}
+        <div className="pt-4 mt-4 border-t border-slate-100 p-4">
+          <NavItem icon={<Settings />} label="Settings" onClick={() => router.push('/settings')} />
+        </div>
       </aside>
 
       {/* MAIN CONTENT */}
@@ -117,19 +158,19 @@ export default function ReportsPage() {
               <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
                 <div className="text-xs font-medium text-slate-400 uppercase">Revenue</div>
                 <div className="text-2xl font-bold text-emerald-600 mt-1">
-                  SAR {reportData.revenue.toLocaleString()}
+                  {reportData.currency} {formatMoney(reportData.revenue)}
                 </div>
               </div>
               <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
                 <div className="text-xs font-medium text-slate-400 uppercase">Expenses</div>
                 <div className="text-2xl font-bold text-slate-900 mt-1">
-                  SAR {reportData.expenses.toLocaleString()}
+                  {reportData.currency} {formatMoney(reportData.expenses)}
                 </div>
               </div>
               <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
                 <div className="text-xs font-medium text-slate-400 uppercase">Net Income</div>
                 <div className={`text-2xl font-bold mt-1 ${reportData.net_income >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                  SAR {reportData.net_income.toLocaleString()}
+                  {reportData.currency} {formatMoney(reportData.net_income)}
                 </div>
               </div>
             </div>
@@ -143,21 +184,21 @@ export default function ReportsPage() {
               <div className="p-6 space-y-4">
                 <div className="flex justify-between items-center py-2 border-b border-dashed border-slate-200">
                   <span className="text-slate-600">Total Revenue</span>
-                  <span className="font-semibold">SAR {reportData.revenue.toLocaleString()}</span>
+                  <span className="font-semibold">{reportData.currency} {formatMoney(reportData.revenue)}</span>
                 </div>
                 
                 <div className="py-2">
                   <div className="text-xs font-bold text-slate-400 uppercase mb-2">Operating Expenses</div>
-                  {/* Dynamic mock rows based on total expenses */}
-                  <ExpenseRow label="Payroll & Contractors" amount={reportData.expenses * 0.6} />
-                  <ExpenseRow label="Cloud Infrastructure" amount={reportData.expenses * 0.25} />
-                  <ExpenseRow label="Software Subscriptions" amount={reportData.expenses * 0.15} />
+                  {/* Dynamic mock rows - Ensure amounts are formatted */}
+                  <ExpenseRow label="Payroll & Contractors" amount={reportData.expenses * 0.6} currency={reportData.currency} />
+                  <ExpenseRow label="Cloud Infrastructure" amount={reportData.expenses * 0.25} currency={reportData.currency} />
+                  <ExpenseRow label="Software Subscriptions" amount={reportData.expenses * 0.15} currency={reportData.currency} />
                 </div>
 
                 <div className="flex justify-between items-center pt-4 border-t border-slate-200">
                   <span className="font-bold text-slate-900">Net Income</span>
                   <span className={`font-bold text-lg ${reportData.net_income >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                    SAR {reportData.net_income.toLocaleString()}
+                    {reportData.currency} {formatMoney(reportData.net_income)}
                   </span>
                 </div>
               </div>
@@ -190,14 +231,11 @@ export default function ReportsPage() {
               <div className={`absolute -top-10 -right-10 w-40 h-40 bg-purple-500 rounded-full blur-3xl opacity-20 ${generating ? 'animate-pulse' : ''}`}></div>
             </div>
 
-            {/* Past Reports List */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-              <h3 className="text-sm font-semibold text-slate-800 mb-3 px-2">Past Statements</h3>
-              <div className="space-y-1">
-                <ReportItem month="September 2025" status="Audit Ready" />
-                <ReportItem month="August 2025" status="Audit Ready" />
-                <ReportItem month="July 2025" status="Audit Ready" />
-              </div>
+            {/* Past Reports List - Removed Hardcoded Data */}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 text-center py-8">
+              <h3 className="text-sm font-semibold text-slate-800 mb-3">Past Statements</h3>
+              <p className="text-xs text-slate-400">No past reports available.</p>
+              {/* Logic to list real reports would go here once backend endpoint exists */}
             </div>
 
           </div>
@@ -226,30 +264,11 @@ function NavItem({ icon, label, active = false, onClick }: { icon: any, label: s
   );
 }
 
-function ExpenseRow({ label, amount }: { label: string, amount: number }) {
+function ExpenseRow({ label, amount, currency }: { label: string, amount: number, currency: string }) {
   return (
     <div className="flex justify-between items-center text-sm py-1.5 hover:bg-slate-50 rounded px-2 -mx-2 transition-colors">
       <span className="text-slate-500">{label}</span>
-      <span className="text-slate-800 font-medium">-{amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+      <span className="text-slate-800 font-medium">-{currency} {amount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
     </div>
-  );
-}
-
-function ReportItem({ month, status }: { month: string, status: string }) {
-  return (
-    <button className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-slate-50 transition-colors group">
-      <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded bg-slate-100 flex items-center justify-center text-slate-500 group-hover:bg-white group-hover:shadow-sm transition-all">
-          <FileText className="w-4 h-4" />
-        </div>
-        <div className="text-left">
-          <div className="text-sm font-medium text-slate-900">{month}</div>
-          <div className="text-[10px] text-emerald-600 font-medium flex items-center gap-1">
-            <CheckCircle2 className="w-2 h-2" /> {status}
-          </div>
-        </div>
-      </div>
-      <Download className="w-4 h-4 text-slate-300 group-hover:text-slate-600" />
-    </button>
   );
 }
