@@ -128,7 +128,8 @@ export default function MergeAnimation() {
           <circle cx={centerX} cy={centerY} r="50" stroke="#3b82f6" strokeWidth="1" fill="none" opacity="0.2" />
           <circle cx={centerX} cy={centerY} r="65" stroke="#3b82f6" strokeWidth="1" fill="none" opacity="0.1" />
           <circle cx={centerX} cy={centerY} r="40" fill="#0f172a" stroke="#3b82f6" strokeWidth="4" />
-          <text x={centerX} y={centerY + 8} textAnchor="middle" fill="white" fontWeight="bold" fontSize="24" style={{ fontFamily: 'sans-serif' }}>F</text>
+          {/* Logo is centered (40x40 size, so offset by 20) */}
+          <image href="/logo.png" x={centerX - 20} y={centerY - 20} width="40" height="40" />
         </g>
 
         {/* --- 4. RIGHT SIDE OUTPUTS (BIGGEST) --- */}
