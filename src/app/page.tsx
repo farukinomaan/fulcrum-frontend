@@ -6,7 +6,7 @@ import {
   Send, Bell, CheckCircle2, AlertCircle, Clock,
   TrendingUp, MessageSquare, Activity as ActivityIcon,
   FileText, CreditCard, RefreshCw, DollarSign,
-  ShieldCheck, Settings, LogOut, User
+  ShieldCheck, Settings, LogOut, User, Zap
 } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation'; // <--- Added useSearchParams
@@ -300,6 +300,12 @@ export default function Home() {
           />
 
           <NavItem
+            icon={<Zap />}
+            label="Automations"
+            onClick={() => router.push('/automations')}
+          />
+
+          <NavItem
             icon={<MessageSquare />}
             label="Ask Fulcrum"
             onClick={() => router.push('/chat')}
@@ -442,8 +448,6 @@ export default function Home() {
                         value={`${transactions.filter(t => t.reconciliation_status === 'matched').length}/${transactions.length}`} 
                         icon={<DollarSign className="text-blue-600" />} 
                     />
-                    
-                    {/* Removed ZATCA Compliance Metric */}
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
