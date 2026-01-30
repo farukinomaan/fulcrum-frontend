@@ -271,7 +271,7 @@ export default function Home() {
     <div className="min-h-screen bg-slate-50 flex font-sans text-slate-900">
 
       {/* SIDEBAR */}
-      <div className="w-64 bg-zinc-400 border-r border-slate-200 hidden md:flex flex-col fixed h-full z-20">
+      <div className="w-64 bg-white border-r border-slate-200 hidden md:flex flex-col fixed h-full z-20">
         <div className="p-6 border-b border-slate-100">
           <div className="flex items-center gap-3">
             <Image src="/logo.png" alt="Fulcrum Logo" width={32} height={32} className="w-8 h-8" />
@@ -323,7 +323,8 @@ export default function Home() {
         {/* Header */}
         <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 sticky top-0 z-10">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-slate-600">Live Feed</span>
+            <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
+            <span className="text-sm font-medium text-slate-600">Books are audit-ready</span>
           </div>
           <div className="flex items-center gap-4 relative">
             <button className="p-2 text-slate-400 hover:text-slate-600 transition-colors relative"><Bell className="w-5 h-5" /></button>
@@ -341,6 +342,9 @@ export default function Home() {
                    <div className="px-4 py-3 border-b border-slate-100">
                       <p className="text-sm font-medium text-slate-900">My Account</p>
                    </div>
+                   <button onClick={() => router.push('/settings')} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors">
+                      <Settings className="w-4 h-4" /> Settings
+                   </button>
                    <button onClick={handleSignOut} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors">
                       <LogOut className="w-4 h-4" /> Sign Out
                    </button>
@@ -385,7 +389,7 @@ export default function Home() {
                   </h3>
                   <div className="flex items-center gap-2">
                     {/* FIX 5: Removed Test Feed Button */}
-                    {/* <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded border border-emerald-100">Live</span> */}
+                    <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded border border-emerald-100">Live</span>
                   </div>
                 </div>
 
@@ -528,7 +532,7 @@ function NavItem({ icon, label, active = false, onClick }: { icon: any, label: s
   return <button onClick={onClick} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${active ? 'bg-slate-100 text-slate-900 shadow-sm' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}>{React.cloneElement(icon, { className: "w-4 h-4" })}{label}</button>;
 }
 function StatCard({ label, value, trend, positive = false }: any) {
-  return <div className="bg-zinc-950 p-5 rounded-2xl border border-slate-200 shadow-sm"><div className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">{label}</div><div className="flex items-end justify-between"><div className="text-2xl font-bold text-slate-900">{value}</div><div className={`text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1 ${positive ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}><TrendingUp className={`w-3 h-3 ${!positive && 'rotate-180'}`} /> {trend}</div></div></div>;
+  return <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm"><div className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">{label}</div><div className="flex items-end justify-between"><div className="text-2xl font-bold text-slate-900">{value}</div><div className={`text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1 ${positive ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}><TrendingUp className={`w-3 h-3 ${!positive && 'rotate-180'}`} /> {trend}</div></div></div>;
 }
 function FeedItem({ title, description, timestamp, type, actionLabel }: any) {
   const icons: any = { reconciliation: <CheckCircle2 className="text-emerald-500 w-5 h-5" />, anomaly: <AlertCircle className="text-amber-500 w-5 h-5" />, invoice: <Send className="text-blue-500 w-5 h-5" /> };
