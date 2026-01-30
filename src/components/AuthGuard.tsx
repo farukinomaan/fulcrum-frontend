@@ -17,7 +17,6 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
             // 1. Handle Public Pages (Login)
             if (pathname === '/login') {
                 if (user) {
-                    // If logged in, decide where to go
                     await checkOnboarding(user.id);
                 } else {
                     setLoading(false);
@@ -25,36 +24,36 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
                 return;
             }
 
-            // 2. Handle Private Pages (Dashboard, Onboarding)
+            // 2. Handle Private Pages
             if (!user) {
                 router.replace('/login');
                 return;
             }
 
-            // 3. User is logged in -> Check Onboarding
+            // 3. User is logged in -> Check Status
             await checkOnboarding(user.id);
         };
 
         const checkOnboarding = async (userId: string) => {
-            // We check if the 'settings' row exists for this user.
-            // Using .maybeSingle() is safer than .single() because it returns null instead of erroring if empty.
-            const { data: settings, error } = await supabase
+            // FIX: Select 'onboarding_completed' instead of just 'user_id'
+            const { data: settings } = await supabase
                 .from('settings')
-                .select('user_id')
+                .select('onboarding_completed')
                 .eq('user_id', userId)
                 .maybeSingle(); 
 
             const isOnboardingPage = pathname === '/onboarding';
+            
+            // Treat user as "New" if settings is null OR onboarding_completed is false
+            const isOnboardingComplete = settings?.onboarding_completed === true;
 
-            if (!settings && !isOnboardingPage) {
-                // CASE: New User (No settings) -> trying to access Dashboard
-                // ACTION: Force them to Onboarding
+            if (!isOnboardingComplete && !isOnboardingPage) {
+                // CASE: User hasn't finished onboarding -> Force them to Onboarding
                 console.log("Redirecting to Onboarding...");
                 router.replace('/onboarding');
             } 
-            else if (settings && isOnboardingPage) {
-                // CASE: Old User (Has settings) -> trying to access Onboarding
-                // ACTION: Force them to Dashboard
+            else if (isOnboardingComplete && isOnboardingPage) {
+                // CASE: User IS finished -> Force them to Dashboard
                 console.log("Redirecting to Dashboard...");
                 router.replace('/');
             } 
