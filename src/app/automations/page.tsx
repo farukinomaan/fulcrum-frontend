@@ -167,7 +167,7 @@ export default function AutomationsPage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    user_id: user?.id, // <--- FIXED: Now sending user_id
+                    user_id: user?.id,
                     to_email: email,
                     subject: `Invoice Reminder: ${log.invoice_id}`,
                     body: log.message
@@ -175,16 +175,21 @@ export default function AutomationsPage() {
             });
             
             const data = await res.json();
+            
+            // --- FIX: Check for 'detail' (FastAPI error) OR 'message' ---
             if(res.ok && data.status === 'success') {
                 alert(`✅ ${data.message}`);
             } else {
-                // Handle "Gmail not connected" error gracefully
-                if(data.message && data.message.includes("Gmail not connected")) {
+                // Determine the actual error message
+                // FastAPI returns errors in 'detail', while our success responses use 'message'
+                const errorMsg = data.detail || data.message || "Unknown Server Error";
+                
+                if(errorMsg.includes("Gmail not connected")) {
                     if(confirm("Gmail is not connected. Connect now?")) {
                         handleConnectGmail();
                     }
                 } else {
-                    alert(`❌ Failed: ${data.message}`);
+                    alert(`❌ Failed: ${errorMsg}`);
                 }
             }
         } catch (e) {
@@ -386,6 +391,7 @@ export default function AutomationsPage() {
                                     </div>
                                 </div>
                             </div>
+
                         </div>
                     </div>
                 </div>
@@ -394,6 +400,7 @@ export default function AutomationsPage() {
     );
 }
 
+// --- SUB-COMPONENT: NavItem ---
 function NavItem({ icon, label, active = false, onClick }: { icon: any, label: string, active?: boolean, onClick?: () => void }) {
   return (
     <button 
