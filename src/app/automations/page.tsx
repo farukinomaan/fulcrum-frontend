@@ -2,11 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { 
     Zap, Play, CheckCircle2, Plus, Loader2, MessageSquare, 
-    Trash2, Activity, CreditCard, FileText, Settings, Bell, LogOut, LayoutDashboard, Send 
+    Trash2, CreditCard, FileText, Settings, Bell, LogOut, LayoutDashboard, Send, Mail 
 } from 'lucide-react';
 
 // --- TYPES ---
@@ -30,21 +30,30 @@ interface ExecutionResult {
 
 export default function AutomationsPage() {
     // --- STATE ---
-    const [prompt, setPrompt] = useState('');
+    const [promptText, setPromptText] = useState(''); // Renamed to avoid window.prompt conflict
     const [loading, setLoading] = useState(false);
     const [running, setRunning] = useState(false);
     const [rules, setRules] = useState<AutomationRule[]>([]);
     const [logs, setLogs] = useState<ExecutionResult[]>([]);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [deletingId, setDeletingId] = useState<string | null>(null);
-    const [sendingIndex, setSendingIndex] = useState<number | null>(null); // New State for Send Button
+    const [sendingIndex, setSendingIndex] = useState<number | null>(null);
+    const [connecting, setConnecting] = useState(false);
 
     const router = useRouter();
+    const searchParams = useSearchParams(); // To check for ?status=connected
     const supabase = createClient();
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
     // --- EFFECTS ---
     useEffect(() => {
+        // 1. Check for Gmail Success
+        if (searchParams.get('status') === 'connected') {
+            alert("✅ Gmail Connected Successfully!");
+            router.replace('/automations'); // Clean URL
+        }
+
+        // 2. Fetch Rules
         const fetchRules = async () => {
             const { data: { user } } = await supabase.auth.getUser();
             if(!user) {
@@ -58,12 +67,12 @@ export default function AutomationsPage() {
             }
         };
         fetchRules();
-    }, [router, API_URL, supabase]);
+    }, [router, API_URL, supabase, searchParams]);
 
     // --- ACTIONS ---
 
     const handleCreate = async () => {
-        if (!prompt.trim()) return;
+        if (!promptText.trim()) return;
         setLoading(true);
         const { data: { user } } = await supabase.auth.getUser();
         
@@ -71,13 +80,13 @@ export default function AutomationsPage() {
             await fetch(`${API_URL}/automation/create`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: user?.id, prompt })
+                body: JSON.stringify({ user_id: user?.id, prompt: promptText })
             });
             
             // Refresh list
             const res = await fetch(`${API_URL}/automation/list?user_id=${user?.id}`);
             if(res.ok) setRules(await res.json());
-            setPrompt('');
+            setPromptText('');
         } catch (e) {
             console.error(e);
             alert("Failed to create rule");
@@ -120,18 +129,45 @@ export default function AutomationsPage() {
         }
     };
 
-    // --- NEW: SEND EMAIL FUNCTION ---
+    // --- NEW: CONNECT GMAIL ---
+    const handleConnectGmail = async () => {
+        setConnecting(true);
+        const { data: { user } } = await supabase.auth.getUser();
+        if(!user) return;
+        
+        try {
+            // Call backend to get the Google Auth URL
+            const res = await fetch(`${API_URL}/auth/gmail/login?user_id=${user.id}`);
+            const data = await res.json();
+            
+            if (data.url) {
+                // Redirect user to Google
+                window.location.href = data.url;
+            } else {
+                alert("Failed to initiate Gmail connection.");
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Connection error");
+        } finally {
+            setConnecting(false);
+        }
+    };
+
+    // --- UPDATED: SEND EMAIL ---
     const handleSend = async (log: ExecutionResult, index: number) => {
-        // Quick prompt to confirm email (in real app, this comes from DB)
         const email = window.prompt("Confirm Recipient Email:", "test@example.com");
         if(!email) return;
 
         setSendingIndex(index);
+        const { data: { user } } = await supabase.auth.getUser();
+
         try {
             const res = await fetch(`${API_URL}/automation/send`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                    user_id: user?.id, // <--- FIXED: Now sending user_id
                     to_email: email,
                     subject: `Invoice Reminder: ${log.invoice_id}`,
                     body: log.message
@@ -139,10 +175,17 @@ export default function AutomationsPage() {
             });
             
             const data = await res.json();
-            if(res.ok) {
+            if(res.ok && data.status === 'success') {
                 alert(`✅ ${data.message}`);
             } else {
-                alert("Failed to send email. Check backend logs.");
+                // Handle "Gmail not connected" error gracefully
+                if(data.message && data.message.includes("Gmail not connected")) {
+                    if(confirm("Gmail is not connected. Connect now?")) {
+                        handleConnectGmail();
+                    }
+                } else {
+                    alert(`❌ Failed: ${data.message}`);
+                }
             }
         } catch (e) {
             console.error(e);
@@ -157,12 +200,10 @@ export default function AutomationsPage() {
         router.push('/login');
     };
 
-    // --- UI RENDER ---
-
     return (
         <div className="min-h-screen bg-slate-50 flex font-sans text-slate-900">
             
-            {/* SIDEBAR (Matches Dashboard) */}
+            {/* SIDEBAR */}
             <div className="w-64 bg-white border-r border-slate-200 hidden md:flex flex-col fixed h-full z-20">
                 <div className="p-6 border-b border-slate-100">
                     <div className="flex items-center gap-3">
@@ -170,12 +211,10 @@ export default function AutomationsPage() {
                         <span className="font-semibold text-lg tracking-tight">Fulcrum</span>
                     </div>
                 </div>
-
                 <nav className="flex-1 p-4 space-y-1">
                     <NavItem icon={<LayoutDashboard />} label="Live Feed" onClick={() => router.push('/')} />
                     <NavItem icon={<CreditCard />} label="Transactions" onClick={() => router.push('/?view=transactions')} />
                     <NavItem icon={<FileText />} label="Reports" onClick={() => router.push('/reports')} />
-                    {/* ACTIVE TAB */}
                     <NavItem icon={<Zap />} label="Automations" active onClick={() => {}} />
                     <NavItem icon={<MessageSquare />} label="Ask Fulcrum" onClick={() => router.push('/chat')} />
                 </nav>
@@ -184,7 +223,7 @@ export default function AutomationsPage() {
                 </div>
             </div>
 
-            {/* MAIN CONTENT WRAPPER */}
+            {/* MAIN CONTENT */}
             <div className="flex-1 flex flex-col min-h-screen md:pl-64 transition-all">
                 
                 {/* HEADER */}
@@ -194,14 +233,19 @@ export default function AutomationsPage() {
                         <span className="text-sm font-medium text-slate-600">Autopilot Mode</span>
                     </div>
                     <div className="flex items-center gap-4 relative">
+                        {/* CONNECT GMAIL BUTTON */}
+                        <button 
+                            onClick={handleConnectGmail}
+                            disabled={connecting}
+                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-all"
+                        >
+                            {connecting ? <Loader2 className="w-4 h-4 animate-spin"/> : <Mail className="w-4 h-4" />}
+                            Connect Gmail
+                        </button>
+                        
                         <button className="p-2 text-slate-400 hover:text-slate-600 transition-colors"><Bell className="w-5 h-5" /></button>
                         <div className="relative">
-                            <button 
-                                onClick={() => setIsProfileOpen(!isProfileOpen)}
-                                className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center font-bold text-xs hover:ring-2 hover:ring-gray-200 transition-all focus:outline-none"
-                            >
-                                ME
-                            </button>
+                            <button onClick={() => setIsProfileOpen(!isProfileOpen)} className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center font-bold text-xs">ME</button>
                             {isProfileOpen && (
                                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 py-1 z-50 animate-in fade-in zoom-in-95">
                                     <div className="px-4 py-3 border-b border-slate-100"><p className="text-sm font-medium text-slate-900">My Account</p></div>
@@ -213,11 +257,9 @@ export default function AutomationsPage() {
                     </div>
                 </header>
 
-                {/* AUTOMATION CONTENT */}
                 <div className="flex-1 overflow-auto bg-slate-50 p-8">
                     <div className="max-w-7xl mx-auto h-full flex flex-col">
                         
-                        {/* Page Title & Action */}
                         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
                             <div>
                                 <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-2">
@@ -237,30 +279,26 @@ export default function AutomationsPage() {
                             </button>
                         </div>
 
-                        {/* SPLIT VIEW */}
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 flex-1 min-h-0">
                             
-                            {/* LEFT: RULES MANAGER */}
                             <div className="lg:col-span-1 flex flex-col gap-6 h-[calc(100vh-250px)]">
-                                {/* Create Box */}
                                 <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm shrink-0">
                                     <h2 className="font-bold text-lg mb-4 flex items-center gap-2"><Plus className="w-5 h-5" /> New Rule</h2>
                                     <textarea 
-                                        value={prompt}
-                                        onChange={e => setPrompt(e.target.value)}
+                                        value={promptText}
+                                        onChange={e => setPromptText(e.target.value)}
                                         placeholder="e.g. Chase invoices over 1000 SAR that are late."
                                         className="w-full p-4 border border-slate-200 rounded-xl h-32 mb-4 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-black focus:outline-none transition-all resize-none text-sm"
                                     />
                                     <button 
                                         onClick={handleCreate}
-                                        disabled={loading || !prompt}
+                                        disabled={loading || !promptText}
                                         className="w-full bg-slate-900 text-white py-3 rounded-xl font-semibold hover:bg-black disabled:opacity-50 transition-all flex justify-center items-center gap-2"
                                     >
                                         {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create Rule'}
                                     </button>
                                 </div>
 
-                                {/* Active Rules List (FIXED WINDOW SCROLL) */}
                                 <div className="flex-1 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
                                     <div className="p-4 border-b border-slate-100 bg-slate-50/50">
                                         <h3 className="font-semibold text-slate-500 text-sm uppercase tracking-wider">Active Rules</h3>
@@ -271,11 +309,7 @@ export default function AutomationsPage() {
                                             <div key={rule.id} className="group bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:border-amber-400 transition-all relative">
                                                 <div className="flex justify-between items-start mb-2">
                                                     <h4 className="font-bold text-slate-800 text-sm pr-6">{rule.name}</h4>
-                                                    <button 
-                                                        onClick={() => handleDelete(rule.id)}
-                                                        className="text-slate-300 hover:text-red-500 transition-colors"
-                                                        disabled={deletingId === rule.id}
-                                                    >
+                                                    <button onClick={() => handleDelete(rule.id)} className="text-slate-300 hover:text-red-500 transition-colors" disabled={deletingId === rule.id}>
                                                         {deletingId === rule.id ? <Loader2 className="w-4 h-4 animate-spin"/> : <Trash2 className="w-4 h-4" />}
                                                     </button>
                                                 </div>
@@ -290,7 +324,6 @@ export default function AutomationsPage() {
                                 </div>
                             </div>
 
-                            {/* RIGHT: EXECUTION LOGS (FIXED WINDOW SCROLL) */}
                             <div className="lg:col-span-2 h-[calc(100vh-250px)]">
                                 <div className="bg-white rounded-2xl border border-slate-200 shadow-sm h-full flex flex-col">
                                     <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 rounded-t-2xl">
@@ -327,7 +360,6 @@ export default function AutomationsPage() {
                                                                     </div>
                                                                 </div>
                                                             </div>
-                                                            {/* SEND BUTTON - ADDED HERE */}
                                                             <button 
                                                                 onClick={() => handleSend(log, idx)}
                                                                 disabled={sendingIndex === idx}
@@ -337,7 +369,6 @@ export default function AutomationsPage() {
                                                                 {sendingIndex === idx ? "Sending..." : "Send Email"}
                                                             </button>
                                                         </div>
-                                                        
                                                         <div className="ml-12">
                                                             <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-700 relative group">
                                                                 <div className="absolute top-0 left-0 w-1 h-full bg-amber-400 rounded-l-xl"></div>
@@ -355,7 +386,6 @@ export default function AutomationsPage() {
                                     </div>
                                 </div>
                             </div>
-
                         </div>
                     </div>
                 </div>
@@ -364,7 +394,6 @@ export default function AutomationsPage() {
     );
 }
 
-// --- SUB-COMPONENT: NavItem ---
 function NavItem({ icon, label, active = false, onClick }: { icon: any, label: string, active?: boolean, onClick?: () => void }) {
   return (
     <button 
