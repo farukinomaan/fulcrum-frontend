@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense, ReactNode } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import Image from 'next/image';
-import { ChevronRight, CheckCircle2, Building2, User, Phone, Globe, Wallet, MessageSquare } from 'lucide-react';
+import { ChevronRight, CheckCircle2, Building2, User, Phone, Globe, Wallet } from 'lucide-react';
 
 // --- TYPESCRIPT INTERFACES ---
 interface ServiceItem {
@@ -26,11 +26,8 @@ const bankingOptions: ServiceItem[] = [
     { id: 'stripe', name: 'Stripe' },
     { id: 'razorpay', name: 'Razorpay' },
     { id: 'paypal', name: 'PayPal' },
-    { id: 'square', name: 'Square' }
-];
-
-const channelServices: ServiceItem[] = [
-    { id: 'whatsapp', name: 'WhatsApp', icon: <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" /></svg> },
+    { id: 'square', name: 'Square' },
+    { id: 'none', name: 'None' }
 ];
 
 // Common country codes
@@ -172,7 +169,7 @@ function OnboardingContent() {
 
     const handleConnectOAuth = async (provider: string, type: 'accounting' | 'banking') => {
         if (!provider) return;
-        if (provider === 'None / Spreadsheet') {
+        if (provider === 'None / Spreadsheet' || provider === 'None') {
             setSelectedServices(prev => ({ ...prev, [type]: 'None' }));
             return;
         }
@@ -223,55 +220,64 @@ function OnboardingContent() {
     };
 
     return (
-        <div className="min-h-screen bg-white font-sans text-slate-900">
+        <div className="min-h-screen bg-neutral-50">
             {/* Header / Nav */}
-            <div className="border-b border-gray-100 p-6 flex items-center justify-between sticky top-0 bg-white/80 backdrop-blur-md z-10">
-                <div className="flex items-center gap-3">
-                    <Image src="/logo.png" alt="Fulcrum" width={32} height={32} className="w-8 h-8" />
-                    <span className="text-xl font-bold tracking-tight">Fulcrum</span>
+            <div className="border-b border-neutral-200 bg-white px-6 py-5 flex items-center justify-between sticky top-0 backdrop-blur-sm z-10 shadow-sm">
+                <div className="flex items-center gap-2.5">
+                    <Image src="/logo.png" alt="Fulcrum" width={28} height={28} className="w-7 h-7" />
+                    <span className="text-lg font-medium text-neutral-900">Fulcrum</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm font-medium text-gray-400">
-                    <span className={step >= 1 ? "text-black" : ""}>Details</span>
-                    <ChevronRight className="w-4 h-4" />
-                    <span className={step >= 2 ? "text-black" : ""}>Connect Services</span>
+                <div className="flex items-center gap-2 text-sm text-neutral-400 font-light">
+                    <span className={step >= 1 ? "text-neutral-900 font-normal" : ""}>Details</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                    <span className={step >= 2 ? "text-neutral-900 font-normal" : ""}>Connect</span>
                 </div>
             </div>
 
-            <main className="max-w-2xl mx-auto p-6 md:p-12">
+            <main className="max-w-xl mx-auto px-6 py-12">
                 
                 {/* --- STEP 1: BUSINESS DETAILS --- */}
                 {step === 1 && (
                     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <div className="mb-8">
-                            <h1 className="text-3xl font-bold mb-2">Tell us about you</h1>
-                            <p className="text-gray-500">We need these details to set up your financial brain.</p>
+                        <div className="mb-10">
+                            <h1 className="text-3xl font-light text-neutral-900 mb-3 leading-tight">Tell us about you</h1>
+                            <p className="text-neutral-500 text-base font-light">We need a few details to get started.</p>
                         </div>
 
-                        <div className="space-y-6">
+                        <div className="space-y-5">
                             {/* Full Name */}
                             <div>
-                                <label className="block text-sm font-semibold mb-2 flex items-center gap-2">
-                                    <User className="w-4 h-4" /> Full Name <span className="text-red-500">*</span>
+                                <label className="block text-sm font-normal text-neutral-700 mb-2 flex items-center gap-2">
+                                    <User className="w-3.5 h-3.5 text-neutral-400" /> 
+                                    Full Name <span className="text-red-500">*</span>
                                 </label>
                                 <input 
                                     type="text" 
                                     value={formData.full_name}
                                     onChange={e => setFormData({...formData, full_name: e.target.value})}
-                                    placeholder="e.g. John Doe"
-                                    className="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-xl focus:bg-white focus:border-black focus:outline-none transition-all"
+                                    placeholder="John Doe"
+                                    className="w-full px-4 py-3.5 bg-white border border-neutral-200 rounded-lg focus:bg-white focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900 transition-all text-sm"
                                 />
                             </div>
 
                             {/* Phone Number */}
                             <div>
-                                <label className="block text-sm font-semibold mb-2 flex items-center gap-2">
-                                    <Phone className="w-4 h-4" /> Phone Number <span className="text-red-500">*</span>
+                                <label className="block text-sm font-normal text-neutral-700 mb-2 flex items-center gap-2">
+                                    <Phone className="w-3.5 h-3.5 text-neutral-400" /> 
+                                    Phone Number <span className="text-red-500">*</span>
                                 </label>
                                 <div className="flex gap-2">
                                     <select 
                                         value={formData.country_code}
                                         onChange={e => setFormData({...formData, country_code: e.target.value})}
-                                        className="p-4 bg-gray-50 border-2 border-gray-100 rounded-xl focus:bg-white focus:border-black focus:outline-none appearance-none cursor-pointer"
+                                        className="px-3 py-3.5 bg-white border border-neutral-200 rounded-lg focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900 cursor-pointer text-sm"
+                                        style={{
+                                            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23525252' d='M10.293 3.293L6 7.586 1.707 3.293A1 1 0 00.293 4.707l5 5a1 1 0 001.414 0l5-5a1 1 0 10-1.414-1.414z'/%3E%3C/svg%3E")`,
+                                            backgroundRepeat: 'no-repeat',
+                                            backgroundPosition: 'right 0.75rem center',
+                                            paddingRight: '2.5rem',
+                                            appearance: 'none'
+                                        }}
                                     >
                                         {countryCodes.map(c => (
                                             <option key={c.code} value={c.code}>{c.code} ({c.country})</option>
@@ -282,48 +288,58 @@ function OnboardingContent() {
                                         value={formData.phone_number}
                                         onChange={e => setFormData({...formData, phone_number: e.target.value})}
                                         placeholder="Mobile Number"
-                                        className="flex-1 p-4 bg-gray-50 border-2 border-gray-100 rounded-xl focus:bg-white focus:border-black focus:outline-none transition-all"
+                                        className="flex-1 px-4 py-3.5 bg-white border border-neutral-200 rounded-lg focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900 transition-all text-sm"
                                     />
                                 </div>
                             </div>
 
                             {/* Company Name */}
                             <div>
-                                <label className="block text-sm font-semibold mb-2 flex items-center gap-2">
-                                    <Building2 className="w-4 h-4" /> Company Name <span className="text-red-500">*</span>
+                                <label className="block text-sm font-normal text-neutral-700 mb-2 flex items-center gap-2">
+                                    <Building2 className="w-3.5 h-3.5 text-neutral-400" /> 
+                                    Company Name <span className="text-red-500">*</span>
                                 </label>
                                 <input 
                                     type="text" 
                                     value={formData.company_name}
                                     onChange={e => setFormData({...formData, company_name: e.target.value})}
-                                    placeholder="e.g. Acme Corp"
-                                    className="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-xl focus:bg-white focus:border-black focus:outline-none transition-all"
+                                    placeholder="Acme Corp"
+                                    className="w-full px-4 py-3.5 bg-white border border-neutral-200 rounded-lg focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900 transition-all text-sm"
                                 />
                             </div>
 
                             {/* Company Address */}
                             <div>
-                                <label className="block text-sm font-semibold mb-2 flex items-center gap-2">
-                                    <Globe className="w-4 h-4" /> Company Address
+                                <label className="block text-sm font-normal text-neutral-700 mb-2 flex items-center gap-2">
+                                    <Globe className="w-3.5 h-3.5 text-neutral-400" /> 
+                                    Company Address
                                 </label>
                                 <input 
                                     type="text" 
                                     value={formData.company_address}
                                     onChange={e => setFormData({...formData, company_address: e.target.value})}
                                     placeholder="City, Country"
-                                    className="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-xl focus:bg-white focus:border-black focus:outline-none transition-all"
+                                    className="w-full px-4 py-3.5 bg-white border border-neutral-200 rounded-lg focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900 transition-all text-sm"
                                 />
                             </div>
 
                             {/* Currency */}
                             <div>
-                                <label className="block text-sm font-semibold mb-2 flex items-center gap-2">
-                                    <Wallet className="w-4 h-4" /> Reporting Currency <span className="text-red-500">*</span>
+                                <label className="block text-sm font-normal text-neutral-700 mb-2 flex items-center gap-2">
+                                    <Wallet className="w-3.5 h-3.5 text-neutral-400" /> 
+                                    Reporting Currency <span className="text-red-500">*</span>
                                 </label>
                                 <select 
                                     value={formData.currency}
                                     onChange={e => setFormData({...formData, currency: e.target.value})}
-                                    className="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-xl focus:bg-white focus:border-black focus:outline-none appearance-none cursor-pointer"
+                                    className="w-full px-4 py-3.5 bg-white border border-neutral-200 rounded-lg focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900 cursor-pointer text-sm"
+                                    style={{
+                                        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23525252' d='M10.293 3.293L6 7.586 1.707 3.293A1 1 0 00.293 4.707l5 5a1 1 0 001.414 0l5-5a1 1 0 10-1.414-1.414z'/%3E%3C/svg%3E")`,
+                                        backgroundRepeat: 'no-repeat',
+                                        backgroundPosition: 'right 0.75rem center',
+                                        paddingRight: '2.5rem',
+                                        appearance: 'none'
+                                    }}
                                 >
                                     <option value="USD">USD - US Dollar</option>
                                     <option value="EUR">EUR - Euro</option>
@@ -337,9 +353,10 @@ function OnboardingContent() {
                             <button 
                                 onClick={handleSaveDetails}
                                 disabled={loading === 'saving'}
-                                className="w-full py-4 bg-black text-white rounded-xl font-bold text-lg hover:bg-gray-800 transition-all flex items-center justify-center gap-2 mt-8"
+                                className="w-full mt-8 py-3.5 bg-neutral-900 text-white rounded-lg font-normal hover:bg-neutral-800 transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
                             >
-                                {loading === 'saving' ? 'Saving...' : 'Continue'} <ChevronRight className="w-5 h-5" />
+                                {loading === 'saving' ? 'Saving...' : 'Continue'} 
+                                <ChevronRight className="w-4 h-4" />
                             </button>
                         </div>
                     </div>
@@ -347,40 +364,51 @@ function OnboardingContent() {
 
                 {/* --- STEP 2: CONNECT SERVICES --- */}
                 {step === 2 && (
-                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
-                        <div>
-                            <h1 className="text-3xl font-bold mb-2">Connect Services</h1>
-                            <p className="text-gray-500">Link your financial sources. Accounting is required.</p>
+                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
+                        <div className="mb-8">
+                            <h1 className="text-3xl font-light text-neutral-900 mb-3 leading-tight">Connect your tools</h1>
+                            <p className="text-neutral-500 text-base font-light">Link your accounting software to get started.</p>
                         </div>
 
                         {/* 1. Accounting Selection */}
-                        <div className="bg-white border-2 border-gray-100 rounded-2xl p-6 shadow-sm">
-                            <h3 className="font-bold text-lg mb-4 flex items-center justify-between">
-                                Accounting Software <span className="text-xs bg-black text-white px-2 py-1 rounded-full">Required</span>
-                            </h3>
+                        <div className="bg-white border border-neutral-200 rounded-xl p-6 shadow-sm">
+                            <div className="flex items-start justify-between mb-4">
+                                <div>
+                                    <h3 className="font-normal text-base text-neutral-900 mb-1">Accounting Software</h3>
+                                    <p className="text-xs text-neutral-400 font-light">Required to sync your books</p>
+                                </div>
+                                <span className="text-xs bg-neutral-900 text-white px-2.5 py-1 rounded-full font-light">Required</span>
+                            </div>
                             
-                            <div className="flex flex-col gap-4">
+                            <div className="flex flex-col gap-3">
                                 <select 
-                                    className="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-xl focus:outline-none focus:border-black"
+                                    className="w-full px-4 py-3.5 bg-neutral-50 border border-neutral-200 rounded-lg focus:outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900 cursor-pointer text-sm"
                                     onChange={(e) => {
                                         if (e.target.value === 'none') return;
                                         handleConnectOAuth(e.target.options[e.target.selectedIndex].text, 'accounting');
                                     }}
                                     value={selectedServices.accounting ? 'connected' : 'default'}
+                                    style={{
+                                        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23525252' d='M10.293 3.293L6 7.586 1.707 3.293A1 1 0 00.293 4.707l5 5a1 1 0 001.414 0l5-5a1 1 0 10-1.414-1.414z'/%3E%3C/svg%3E")`,
+                                        backgroundRepeat: 'no-repeat',
+                                        backgroundPosition: 'right 0.75rem center',
+                                        paddingRight: '2.5rem',
+                                        appearance: 'none'
+                                    }}
                                 >
-                                    <option value="default" disabled>Select your provider...</option>
+                                    <option value="default" disabled>Select your provider</option>
                                     {accountingOptions.map(opt => (
                                         <option key={opt.id} value={opt.id}>{opt.name}</option>
                                     ))}
                                 </select>
 
                                 {selectedServices.accounting && (
-                                    <div className="flex items-center gap-3 p-4 bg-green-50 text-green-700 rounded-xl border border-green-200">
-                                        <CheckCircle2 className="w-5 h-5" />
-                                        <span className="font-semibold">Connected: {selectedServices.accounting}</span>
+                                    <div className="flex items-center gap-3 px-4 py-3 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-200">
+                                        <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                                        <span className="text-sm font-normal flex-1">Connected: {selectedServices.accounting}</span>
                                         <button 
                                             onClick={() => setSelectedServices(prev => ({...prev, accounting: null}))}
-                                            className="ml-auto text-xs underline"
+                                            className="text-xs underline hover:no-underline font-light"
                                         >Change</button>
                                     </div>
                                 )}
@@ -388,67 +416,59 @@ function OnboardingContent() {
                         </div>
 
                         {/* 2. Banking Selection */}
-                        <div className="bg-white border-2 border-gray-100 rounded-2xl p-6 shadow-sm">
-                            <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-                                Banking & Payments <span className="text-xs text-gray-400 font-normal">(Optional)</span>
-                            </h3>
+                        <div className="bg-white border border-neutral-200 rounded-xl p-6 shadow-sm">
+                            <div className="flex items-start justify-between mb-4">
+                                <div>
+                                    <h3 className="font-normal text-base text-neutral-900 mb-1">Banking & Payments</h3>
+                                    <p className="text-xs text-neutral-400 font-light">Optional: Connect payment processors</p>
+                                </div>
+                                <span className="text-xs text-neutral-400 px-2.5 py-1 rounded-full border border-neutral-200 font-light">Optional</span>
+                            </div>
                             
-                            <div className="flex flex-col gap-4">
+                            <div className="flex flex-col gap-3">
                                 <select 
-                                    className="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-xl focus:outline-none focus:border-black"
+                                    className="w-full px-4 py-3.5 bg-neutral-50 border border-neutral-200 rounded-lg focus:outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900 cursor-pointer text-sm"
                                     onChange={(e) => {
                                         if (e.target.value === 'default') return;
                                         handleConnectOAuth(e.target.options[e.target.selectedIndex].text, 'banking');
                                     }}
                                     value={selectedServices.banking ? 'connected' : 'default'}
+                                    style={{
+                                        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23525252' d='M10.293 3.293L6 7.586 1.707 3.293A1 1 0 00.293 4.707l5 5a1 1 0 001.414 0l5-5a1 1 0 10-1.414-1.414z'/%3E%3C/svg%3E")`,
+                                        backgroundRepeat: 'no-repeat',
+                                        backgroundPosition: 'right 0.75rem center',
+                                        paddingRight: '2.5rem',
+                                        appearance: 'none'
+                                    }}
                                 >
-                                    <option value="default" disabled>Select your bank...</option>
+                                    <option value="default" disabled>Select your provider</option>
                                     {bankingOptions.map(opt => (
                                         <option key={opt.id} value={opt.id}>{opt.name}</option>
                                     ))}
                                 </select>
 
                                 {selectedServices.banking && (
-                                    <div className="flex items-center gap-3 p-4 bg-green-50 text-green-700 rounded-xl border border-green-200">
-                                        <CheckCircle2 className="w-5 h-5" />
-                                        <span className="font-semibold">Connected: {selectedServices.banking}</span>
+                                    <div className="flex items-center gap-3 px-4 py-3 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-200">
+                                        <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                                        <span className="text-sm font-normal">Connected: {selectedServices.banking}</span>
                                     </div>
                                 )}
                             </div>
                         </div>
 
-                         {/* 3. Channels Selection */}
-                        <div className="bg-white border-2 border-gray-100 rounded-2xl p-6 shadow-sm">
-                            <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-                                <MessageSquare className="w-5 h-5" /> AI Channels <span className="text-xs text-gray-400 font-normal">(Optional)</span>
-                            </h3>
-                            
-                            <div className="grid grid-cols-1 gap-3">
-                                {channelServices.map((service) => (
-                                    <button 
-                                        key={service.id} 
-                                        onClick={() => toggleChannel(service.name)} 
-                                        className={`group p-4 bg-white border-2 rounded-xl transition-all duration-300 flex items-center justify-between ${selectedServices.channels.includes(service.name) ? 'border-black shadow-md ring-1 ring-black' : 'border-gray-100 hover:border-gray-300'}`}
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <div className="text-black">{service.icon}</div>
-                                            <span className="font-semibold">{service.name}</span>
-                                        </div>
-                                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${selectedServices.channels.includes(service.name) ? 'bg-black border-black' : 'border-gray-300'}`}>
-                                            {selectedServices.channels.includes(service.name) && <CheckCircle2 className="w-3 h-3 text-white" />}
-                                        </div>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="flex gap-4 pt-4">
-                            <button onClick={() => setStep(1)} className="px-6 py-4 text-gray-500 font-bold hover:text-black">Back</button>
+                        <div className="flex gap-3 pt-6">
+                            <button 
+                                onClick={() => setStep(1)} 
+                                className="px-5 py-3 text-neutral-500 font-light hover:text-neutral-900 transition-colors text-sm"
+                            >
+                                Back
+                            </button>
                             <button 
                                 onClick={completeOnboarding}
-                                className="flex-1 py-4 bg-black text-white rounded-xl font-bold text-lg hover:bg-gray-800 transition-all flex items-center justify-center gap-2"
+                                className="flex-1 py-3.5 bg-neutral-900 text-white rounded-lg font-normal hover:bg-neutral-800 transition-all flex items-center justify-center gap-2 shadow-sm"
                             >
-                                Complete Setup <ChevronRight className="w-5 h-5" />
+                                Complete Setup 
+                                <ChevronRight className="w-4 h-4" />
                             </button>
                         </div>
                     </div>
@@ -461,7 +481,7 @@ function OnboardingContent() {
 
 export default function OnboardingPage() {
     return (
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="text-neutral-400">Loading...</div></div>}>
             <OnboardingContent />
         </Suspense>
     );
