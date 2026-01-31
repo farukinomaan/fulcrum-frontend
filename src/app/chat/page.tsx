@@ -5,7 +5,7 @@ import Image from 'next/image'; // <--- Added Image Import
 import {
     Send, Bot, User, ArrowLeft,
     Sparkles, Activity as ActivityIcon,
-    CreditCard, FileText, MessageSquare
+    CreditCard, FileText, MessageSquare, Zap
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
@@ -140,6 +140,7 @@ export default function ChatPage() {
                     <NavItem icon={<CreditCard />} label="Transactions" onClick={() => router.push('/?view=transactions')} />
                     <NavItem icon={<FileText />} label="Reports" onClick={() => router.push('/reports')} />
                     <NavItem icon={<MessageSquare />} label="Ask Fulcrum" active />
+                    <NavItem icon={<Zap />} label="Automations" onClick={() => router.push('/automations')} />
                 </nav>
             </div>
 

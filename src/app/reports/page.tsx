@@ -5,7 +5,7 @@ import Image from 'next/image'; // <--- Added Image Import
 import {
     FileText, Download, TrendingUp, TrendingDown,
     Calendar, ChevronRight, Activity, CreditCard, MessageSquare, CheckCircle2,
-    Settings, LogOut // <--- Added Settings Import
+    Settings, LogOut, Zap // <--- Added Settings Import
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
@@ -111,6 +111,7 @@ export default function ReportsPage() {
                     <NavItem icon={<Activity />} label="Live Feed" onClick={() => router.push('/')} />
                     <NavItem icon={<CreditCard />} label="Transactions" onClick={() => router.push('/?view=transactions')} />
                     <NavItem icon={<FileText />} label="Reports" active />
+                    <NavItem icon={<Zap />} label="Automations" onClick={() => router.push('/automations')} />
                     <NavItem icon={<MessageSquare />} label="Ask Fulcrum" onClick={() => router.push('/chat')} />
                 </nav>
 
