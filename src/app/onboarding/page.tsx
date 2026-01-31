@@ -213,7 +213,9 @@ function OnboardingContent() {
         await supabase.from('settings').upsert({
             user_id: user.id,
             channels: selectedServices.channels,
-            onboarding_completed: true
+            onboarding_completed: true,
+            accounting_provider: selectedServices.accounting, // <--- ADD THIS
+            banking_provider: selectedServices.banking
         }, { onConflict: 'user_id' });
 
         router.push('/');
