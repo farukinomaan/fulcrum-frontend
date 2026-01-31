@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { 
     Zap, Play, CheckCircle2, Plus, Loader2, MessageSquare, 
-    Trash2, Activity, CreditCard, FileText, Settings, Bell, LogOut, LayoutDashboard 
+    Trash2, Activity, CreditCard, FileText, Settings, Bell, LogOut, LayoutDashboard, Send 
 } from 'lucide-react';
 
 // --- TYPES ---
@@ -37,6 +37,7 @@ export default function AutomationsPage() {
     const [logs, setLogs] = useState<ExecutionResult[]>([]);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [sendingIndex, setSendingIndex] = useState<number | null>(null); // New State for Send Button
 
     const router = useRouter();
     const supabase = createClient();
@@ -116,6 +117,38 @@ export default function AutomationsPage() {
             alert("Engine run failed");
         } finally {
             setRunning(false);
+        }
+    };
+
+    // --- NEW: SEND EMAIL FUNCTION ---
+    const handleSend = async (log: ExecutionResult, index: number) => {
+        // Quick prompt to confirm email (in real app, this comes from DB)
+        const email = window.prompt("Confirm Recipient Email:", "test@example.com");
+        if(!email) return;
+
+        setSendingIndex(index);
+        try {
+            const res = await fetch(`${API_URL}/automation/send`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    to_email: email,
+                    subject: `Invoice Reminder: ${log.invoice_id}`,
+                    body: log.message
+                })
+            });
+            
+            const data = await res.json();
+            if(res.ok) {
+                alert(`✅ ${data.message}`);
+            } else {
+                alert("Failed to send email. Check backend logs.");
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Network Error: Could not connect to server.");
+        } finally {
+            setSendingIndex(null);
         }
     };
 
@@ -294,7 +327,15 @@ export default function AutomationsPage() {
                                                                     </div>
                                                                 </div>
                                                             </div>
-                                                            <span className="text-xs font-mono text-slate-400">{new Date(log.timestamp).toLocaleTimeString()}</span>
+                                                            {/* SEND BUTTON - ADDED HERE */}
+                                                            <button 
+                                                                onClick={() => handleSend(log, idx)}
+                                                                disabled={sendingIndex === idx}
+                                                                className="flex items-center gap-2 px-3 py-1.5 bg-slate-900 text-white text-xs font-bold rounded-lg hover:bg-black transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                                                            >
+                                                                {sendingIndex === idx ? <Loader2 className="w-3 h-3 animate-spin"/> : <Send className="w-3 h-3" />}
+                                                                {sendingIndex === idx ? "Sending..." : "Send Email"}
+                                                            </button>
                                                         </div>
                                                         
                                                         <div className="ml-12">
@@ -304,7 +345,7 @@ export default function AutomationsPage() {
                                                             </div>
                                                             <div className="mt-2 flex items-center gap-2">
                                                                 <span className="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded">Action: {log.action}</span>
-                                                                <span className="text-xs text-green-600 font-medium">Draft Generated Successfully</span>
+                                                                <span className="text-xs text-green-600 font-medium">Draft Ready</span>
                                                             </div>
                                                         </div>
                                                     </div>
