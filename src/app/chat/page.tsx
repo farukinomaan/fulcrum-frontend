@@ -10,6 +10,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 
+
 // --- TYPES ---
 interface Message {
     id: string;
