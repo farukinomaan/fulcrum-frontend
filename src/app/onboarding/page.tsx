@@ -210,12 +210,22 @@ function OnboardingContent() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
+        // Calculate boolean flags
+        const isZoho = selectedServices.accounting.toLowerCase().includes('zoho');
+        const isStripe = selectedServices.banking?.toLowerCase().includes('stripe') || false;
+
         await supabase.from('settings').upsert({
             user_id: user.id,
             channels: selectedServices.channels,
             onboarding_completed: true,
-            accounting_provider: selectedServices.accounting, // <--- ADD THIS
-            banking_provider: selectedServices.banking
+            
+            // 1. Text Fields (What shows in the dropdown)
+            accounting_provider: selectedServices.accounting,
+            banking_provider: selectedServices.banking,
+
+            // 2. Boolean Flags (What the backend logic uses)
+            zoho_connected: isZoho,
+            stripe_connected: isStripe
         }, { onConflict: 'user_id' });
 
         router.push('/');
