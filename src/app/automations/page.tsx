@@ -156,9 +156,8 @@ export default function AutomationsPage() {
 
     // --- UPDATED: SEND EMAIL ---
     const handleSend = async (log: ExecutionResult, index: number) => {
-        const email = window.prompt("Confirm Recipient Email:", "test@example.com");
-        if(!email) return;
-
+        // --- 1. REMOVED POPUP HERE ---
+        
         setSendingIndex(index);
         const { data: { user } } = await supabase.auth.getUser();
 
@@ -168,7 +167,7 @@ export default function AutomationsPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     user_id: user?.id,
-                    to_email: email,
+                    // --- 2. REMOVED to_email HERE ---
                     subject: `Invoice Reminder: ${log.invoice_id}`,
                     body: log.message
                 })
@@ -176,14 +175,10 @@ export default function AutomationsPage() {
             
             const data = await res.json();
             
-            // --- FIX: Check for 'detail' (FastAPI error) OR 'message' ---
             if(res.ok && data.status === 'success') {
                 alert(`✅ ${data.message}`);
             } else {
-                // Determine the actual error message
-                // FastAPI returns errors in 'detail', while our success responses use 'message'
                 const errorMsg = data.detail || data.message || "Unknown Server Error";
-                
                 if(errorMsg.includes("Gmail not connected")) {
                     if(confirm("Gmail is not connected. Connect now?")) {
                         handleConnectGmail();
