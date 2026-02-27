@@ -4,30 +4,28 @@ import { useState, useEffect, Suspense, ReactNode } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import Image from 'next/image';
-import { ChevronRight, CheckCircle2, Building2, User, Phone, Globe, Wallet } from 'lucide-react';
+import { ChevronRight, CheckCircle2, Building2, User, Phone, Globe, Wallet, Loader2 } from 'lucide-react';
 
 // --- TYPESCRIPT INTERFACES ---
 interface ServiceItem {
     id: string;
     name: string;
-    icon?: ReactNode;
+    description: string;
 }
 
 // --- STATIC DATA ---
 const accountingOptions: ServiceItem[] = [
-    { id: 'zoho', name: 'Zoho Books' },
-    { id: 'xero', name: 'Xero' },
-    { id: 'quickbooks', name: 'QuickBooks' },
-    { id: 'freshbooks', name: 'FreshBooks' },
-    { id: 'none', name: 'None / Spreadsheet' }
+    { id: 'zoho', name: 'Zoho Books', description: 'Two-way sync' },
+    { id: 'xero', name: 'Xero', description: 'Two-way sync' },
+    { id: 'quickbooks', name: 'QuickBooks', description: 'Coming soon' },
+    { id: 'none', name: 'None', description: 'Manual / Spreadsheet' }
 ];
 
 const bankingOptions: ServiceItem[] = [
-    { id: 'stripe', name: 'Stripe' },
-    { id: 'razorpay', name: 'Razorpay' },
-    { id: 'paypal', name: 'PayPal' },
-    { id: 'square', name: 'Square' },
-    { id: 'none', name: 'None' }
+    { id: 'stripe', name: 'Stripe', description: 'Payments & payouts' },
+    { id: 'razorpay', name: 'Razorpay', description: 'Coming soon' },
+    { id: 'paypal', name: 'PayPal', description: 'Coming soon' },
+    { id: 'none', name: 'None', description: 'Manual reconciliation' }
 ];
 
 // Common country codes
@@ -169,7 +167,9 @@ function OnboardingContent() {
 
     const handleConnectOAuth = async (provider: string, type: 'accounting' | 'banking') => {
         if (!provider) return;
-        if (provider === 'None / Spreadsheet' || provider === 'None') {
+        
+        // Handle "None" selection locally
+        if (provider === 'None') {
             setSelectedServices(prev => ({ ...prev, [type]: 'None' }));
             return;
         }
@@ -190,18 +190,9 @@ function OnboardingContent() {
             window.location.href = data.url; 
         } catch (e) {
             console.error(e);
-            alert(`${provider} integration is coming soon!`);
+            alert(`${provider} integration is coming soon! For now, please select 'None' or a supported provider.`);
             setLoading(null);
         }
-    };
-
-    const toggleChannel = (channel: string) => {
-        setSelectedServices(prev => ({
-            ...prev,
-            channels: prev.channels.includes(channel)
-                ? prev.channels.filter(c => c !== channel)
-                : [...prev.channels, channel]
-        }));
     };
 
     const completeOnboarding = async () => {
@@ -219,11 +210,11 @@ function OnboardingContent() {
             channels: selectedServices.channels,
             onboarding_completed: true,
             
-            // 1. Text Fields (What shows in the dropdown)
+            // Text Fields
             accounting_provider: selectedServices.accounting,
             banking_provider: selectedServices.banking,
 
-            // 2. Boolean Flags (What the backend logic uses)
+            // Boolean Flags
             zoho_connected: isZoho,
             stripe_connected: isStripe
         }, { onConflict: 'user_id' });
@@ -272,7 +263,7 @@ function OnboardingContent() {
                                 />
                             </div>
 
-                            {/* Phone Number */}
+                            {/* Phone Number - LOCKED TO NUMBERS ONLY */}
                             <div>
                                 <label className="block text-sm font-normal text-neutral-700 mb-2 flex items-center gap-2">
                                     <Phone className="w-3.5 h-3.5 text-neutral-400" /> 
@@ -298,7 +289,11 @@ function OnboardingContent() {
                                     <input 
                                         type="tel" 
                                         value={formData.phone_number}
-                                        onChange={e => setFormData({...formData, phone_number: e.target.value})}
+                                        onChange={e => {
+                                            // REGEX: Strip out anything that is NOT a number
+                                            const onlyNums = e.target.value.replace(/\D/g, '');
+                                            setFormData({...formData, phone_number: onlyNums});
+                                        }}
                                         placeholder="Mobile Number"
                                         className="flex-1 px-4 py-3.5 bg-white border border-neutral-200 rounded-lg focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900 transition-all text-sm"
                                     />
@@ -374,101 +369,99 @@ function OnboardingContent() {
                     </div>
                 )}
 
-                {/* --- STEP 2: CONNECT SERVICES --- */}
+                {/* --- STEP 2: CONNECT SERVICES (REDESIGNED) --- */}
                 {step === 2 && (
-                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
-                        <div className="mb-8">
+                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
+                        <div className="mb-4">
                             <h1 className="text-3xl font-light text-neutral-900 mb-3 leading-tight">Connect your tools</h1>
-                            <p className="text-neutral-500 text-base font-light">Link your accounting software to get started.</p>
+                            <p className="text-neutral-500 text-base font-light">Link your software to enable autonomous syncing.</p>
                         </div>
 
-                        {/* 1. Accounting Selection */}
-                        <div className="bg-white border border-neutral-200 rounded-xl p-6 shadow-sm">
+                        {/* 1. Accounting Integration Grid */}
+                        <div>
                             <div className="flex items-start justify-between mb-4">
                                 <div>
-                                    <h3 className="font-normal text-base text-neutral-900 mb-1">Accounting Software</h3>
-                                    <p className="text-xs text-neutral-400 font-light">Required to sync your books</p>
+                                    <h3 className="font-normal text-base text-neutral-900">Accounting Software</h3>
+                                    <p className="text-xs text-neutral-400 font-light mt-1">Required to sync your books</p>
                                 </div>
                                 <span className="text-xs bg-neutral-900 text-white px-2.5 py-1 rounded-full font-light">Required</span>
                             </div>
                             
-                            <div className="flex flex-col gap-3">
-                                <select 
-                                    className="w-full px-4 py-3.5 bg-neutral-50 border border-neutral-200 rounded-lg focus:outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900 cursor-pointer text-sm"
-                                    onChange={(e) => {
-                                        if (e.target.value === 'none') return;
-                                        handleConnectOAuth(e.target.options[e.target.selectedIndex].text, 'accounting');
-                                    }}
-                                    value={selectedServices.accounting ? 'connected' : 'default'}
-                                    style={{
-                                        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23525252' d='M10.293 3.293L6 7.586 1.707 3.293A1 1 0 00.293 4.707l5 5a1 1 0 001.414 0l5-5a1 1 0 10-1.414-1.414z'/%3E%3C/svg%3E")`,
-                                        backgroundRepeat: 'no-repeat',
-                                        backgroundPosition: 'right 0.75rem center',
-                                        paddingRight: '2.5rem',
-                                        appearance: 'none'
-                                    }}
-                                >
-                                    <option value="default" disabled>Select your provider</option>
-                                    {accountingOptions.map(opt => (
-                                        <option key={opt.id} value={opt.id}>{opt.name}</option>
-                                    ))}
-                                </select>
-
-                                {selectedServices.accounting && (
-                                    <div className="flex items-center gap-3 px-4 py-3 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-200">
-                                        <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-                                        <span className="text-sm font-normal flex-1">Connected: {selectedServices.accounting}</span>
-                                        <button 
-                                            onClick={() => setSelectedServices(prev => ({...prev, accounting: null}))}
-                                            className="text-xs underline hover:no-underline font-light"
-                                        >Change</button>
-                                    </div>
-                                )}
+                            <div className="grid grid-cols-2 gap-3">
+                                {accountingOptions.map(opt => {
+                                    const isSelected = selectedServices.accounting === opt.name;
+                                    const isLoading = loading === opt.name;
+                                    
+                                    return (
+                                        <button
+                                            key={opt.id}
+                                            onClick={() => handleConnectOAuth(opt.name, 'accounting')}
+                                            disabled={isLoading}
+                                            className={`relative flex flex-col items-start p-4 rounded-xl border transition-all text-left ${
+                                                isSelected 
+                                                    ? 'border-neutral-900 ring-1 ring-neutral-900 bg-neutral-50 shadow-sm' 
+                                                    : 'border-neutral-200 bg-white hover:border-neutral-300 hover:bg-neutral-50 text-neutral-700'
+                                            }`}
+                                        >
+                                            <div className="flex justify-between items-center w-full mb-2">
+                                                <span className={`font-medium text-sm ${isSelected ? 'text-neutral-900' : ''}`}>
+                                                    {opt.name}
+                                                </span>
+                                                {isSelected && <CheckCircle2 className="w-4 h-4 text-neutral-900" />}
+                                                {isLoading && <Loader2 className="w-4 h-4 text-neutral-400 animate-spin" />}
+                                            </div>
+                                            <span className="text-xs text-neutral-500 font-light">
+                                                {isSelected ? 'Connected' : opt.description}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </div>
 
-                        {/* 2. Banking Selection */}
-                        <div className="bg-white border border-neutral-200 rounded-xl p-6 shadow-sm">
+                        {/* 2. Banking Integration Grid */}
+                        <div>
                             <div className="flex items-start justify-between mb-4">
                                 <div>
-                                    <h3 className="font-normal text-base text-neutral-900 mb-1">Banking & Payments</h3>
-                                    <p className="text-xs text-neutral-400 font-light">Optional: Connect payment processors</p>
+                                    <h3 className="font-normal text-base text-neutral-900">Banking & Payments</h3>
+                                    <p className="text-xs text-neutral-400 font-light mt-1">Optional: Connect payment processors</p>
                                 </div>
-                                <span className="text-xs text-neutral-400 px-2.5 py-1 rounded-full border border-neutral-200 font-light">Optional</span>
+                                <span className="text-xs text-neutral-500 px-2.5 py-1 rounded-full border border-neutral-200 bg-white font-light">Optional</span>
                             </div>
                             
-                            <div className="flex flex-col gap-3">
-                                <select 
-                                    className="w-full px-4 py-3.5 bg-neutral-50 border border-neutral-200 rounded-lg focus:outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900 cursor-pointer text-sm"
-                                    onChange={(e) => {
-                                        if (e.target.value === 'default') return;
-                                        handleConnectOAuth(e.target.options[e.target.selectedIndex].text, 'banking');
-                                    }}
-                                    value={selectedServices.banking ? 'connected' : 'default'}
-                                    style={{
-                                        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23525252' d='M10.293 3.293L6 7.586 1.707 3.293A1 1 0 00.293 4.707l5 5a1 1 0 001.414 0l5-5a1 1 0 10-1.414-1.414z'/%3E%3C/svg%3E")`,
-                                        backgroundRepeat: 'no-repeat',
-                                        backgroundPosition: 'right 0.75rem center',
-                                        paddingRight: '2.5rem',
-                                        appearance: 'none'
-                                    }}
-                                >
-                                    <option value="default" disabled>Select your provider</option>
-                                    {bankingOptions.map(opt => (
-                                        <option key={opt.id} value={opt.id}>{opt.name}</option>
-                                    ))}
-                                </select>
-
-                                {selectedServices.banking && (
-                                    <div className="flex items-center gap-3 px-4 py-3 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-200">
-                                        <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-                                        <span className="text-sm font-normal">Connected: {selectedServices.banking}</span>
-                                    </div>
-                                )}
+                            <div className="grid grid-cols-2 gap-3">
+                                {bankingOptions.map(opt => {
+                                    const isSelected = selectedServices.banking === opt.name;
+                                    const isLoading = loading === opt.name;
+                                    
+                                    return (
+                                        <button
+                                            key={opt.id}
+                                            onClick={() => handleConnectOAuth(opt.name, 'banking')}
+                                            disabled={isLoading}
+                                            className={`relative flex flex-col items-start p-4 rounded-xl border transition-all text-left ${
+                                                isSelected 
+                                                    ? 'border-neutral-900 ring-1 ring-neutral-900 bg-neutral-50 shadow-sm' 
+                                                    : 'border-neutral-200 bg-white hover:border-neutral-300 hover:bg-neutral-50 text-neutral-700'
+                                            }`}
+                                        >
+                                            <div className="flex justify-between items-center w-full mb-2">
+                                                <span className={`font-medium text-sm ${isSelected ? 'text-neutral-900' : ''}`}>
+                                                    {opt.name}
+                                                </span>
+                                                {isSelected && <CheckCircle2 className="w-4 h-4 text-neutral-900" />}
+                                                {isLoading && <Loader2 className="w-4 h-4 text-neutral-400 animate-spin" />}
+                                            </div>
+                                            <span className="text-xs text-neutral-500 font-light">
+                                                {isSelected ? 'Connected' : opt.description}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </div>
 
-                        <div className="flex gap-3 pt-6">
+                        <div className="flex gap-3 pt-4 border-t border-neutral-100">
                             <button 
                                 onClick={() => setStep(1)} 
                                 className="px-5 py-3 text-neutral-500 font-light hover:text-neutral-900 transition-colors text-sm"
@@ -493,7 +486,11 @@ function OnboardingContent() {
 
 export default function OnboardingPage() {
     return (
-        <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="text-neutral-400">Loading...</div></div>}>
+        <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center bg-neutral-50">
+                <Loader2 className="w-6 h-6 text-neutral-400 animate-spin" />
+            </div>
+        }>
             <OnboardingContent />
         </Suspense>
     );
