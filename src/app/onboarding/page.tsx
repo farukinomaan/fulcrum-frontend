@@ -15,22 +15,22 @@ interface ServiceItem {
     name: string;
     description: string;
     badge?: string;
-    logo?: string;
+    logo?: string | null;
 }
 
 // --- STATIC DATA ---
 const accountingOptions: ServiceItem[] = [
-    { id: 'zoho', name: 'Zoho Books', description: 'Two-way sync', logo: '📗' },
-    { id: 'xero', name: 'Xero', description: 'Two-way sync', logo: '🔵' },
-    { id: 'quickbooks', name: 'QuickBooks', description: 'Coming soon', badge: 'Soon', logo: '🟢' },
-    { id: 'none', name: 'None', description: 'Manual / Spreadsheet', logo: '📋' }
+    { id: 'zoho', name: 'Zoho Books', description: 'Two-way sync', logo: 'https://logo.clearbit.com/zoho.com' },
+    { id: 'xero', name: 'Xero', description: 'Two-way sync', logo: 'https://logo.clearbit.com/xero.com' },
+    { id: 'quickbooks', name: 'QuickBooks', description: 'Coming soon', badge: 'Soon', logo: 'https://logo.clearbit.com/quickbooks.intuit.com' },
+    { id: 'none', name: 'None', description: 'Manual / Spreadsheet', logo: null }
 ];
 
 const bankingOptions: ServiceItem[] = [
-    { id: 'stripe', name: 'Stripe', description: 'Payments & payouts', logo: '💳' },
-    { id: 'razorpay', name: 'Razorpay', description: 'Coming soon', badge: 'Soon', logo: '🟦' },
-    { id: 'paypal', name: 'PayPal', description: 'Coming soon', badge: 'Soon', logo: '🅿️' },
-    { id: 'none', name: 'None', description: 'Manual reconciliation', logo: '📋' }
+    { id: 'stripe', name: 'Stripe', description: 'Payments & payouts', logo: 'https://logo.clearbit.com/stripe.com' },
+    { id: 'razorpay', name: 'Razorpay', description: 'Coming soon', badge: 'Soon', logo: 'https://logo.clearbit.com/razorpay.com' },
+    { id: 'paypal', name: 'PayPal', description: 'Coming soon', badge: 'Soon', logo: 'https://logo.clearbit.com/paypal.com' },
+    { id: 'none', name: 'None', description: 'Manual reconciliation', logo: null }
 ];
 
 const countryCodes = [
@@ -78,7 +78,18 @@ function ServiceCard({
             `}
         >
             {/* Logo */}
-            <span className="text-xl flex-shrink-0 w-8 text-center">{opt.logo}</span>
+            <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
+                {opt.logo ? (
+                    <img
+                        src={opt.logo}
+                        alt={`${opt.name} logo`}
+                        className={`w-7 h-7 object-contain rounded-md ${isSelected ? "brightness-0 invert" : ""}`}
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                    />
+                ) : (
+                    <div className={`w-7 h-7 rounded-md flex items-center justify-center text-xs font-bold ${isSelected ? "bg-white/20 text-white" : "bg-neutral-100 text-neutral-400"}`}>—</div>
+                )}
+            </div>
 
             {/* Text */}
             <div className="flex-1 min-w-0">
