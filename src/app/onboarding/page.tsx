@@ -68,9 +68,8 @@ function OnboardingContent() {
         channels: [],
     });
 
-    // 1. Fetch saved progress on load
     useEffect(() => {
-        const fetchProgress = async () => {
+        const loadState = async () => {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
@@ -79,6 +78,12 @@ function OnboardingContent() {
                 .select('*')
                 .eq('user_id', user.id)
                 .single();
+
+            const urlStatus = searchParams.get('status');
+            const urlProvider = searchParams.get('provider');
+
+            let newAccounting = null;
+            let newBanking = null;
 
             if (settings) {
                 setFormData(prev => ({
@@ -89,91 +94,52 @@ function OnboardingContent() {
                     currency: settings.currency || 'USD',
                 }));
 
-                const updates: any = {};
-                
-                // If business name exists, move to Step 2
                 if (settings.business_name) setStep(2);
 
-                if (settings.accounting_provider && settings.accounting_provider !== 'Not Connected') {
-                    updates.accounting = settings.accounting_provider;
-                }
-                if (settings.banking_provider && settings.banking_provider !== 'Not Connected') {
-                    updates.banking = settings.banking_provider;
-                }
-                if (settings.channels && settings.channels.length > 0) {
-                    updates.channels = settings.channels;
-                }
+                // Base values from DB
+                newAccounting = settings.accounting_provider;
+                newBanking = settings.banking_provider;
 
-                if (Object.keys(updates).length > 0) {
-                    setSelectedServices(prev => ({ ...prev, ...updates }));
+                // Ghost connection filtering (only apply if DB says false)
+                if (newAccounting === 'Zoho Books' && settings.zoho_connected === false) {
+                    newAccounting = 'None';
                 }
-                
-                // Check if returning from OAuth
-                const status = searchParams.get('status');
-                if(!status && settings.business_name) setStep(2);
+                if (newBanking === 'Stripe' && settings.stripe_connected === false) {
+                    newBanking = 'None';
+                }
+            }
+
+            // URL Overrides (URL ALWAYS WINS because we just came back from connecting)
+            if (urlStatus === 'connected') {
+                newAccounting = urlProvider ? decodeURIComponent(urlProvider) : 'Connected Service';
+                if (newAccounting.toLowerCase().replace(/\s+/g, '') === 'zohobooks') {
+                    newAccounting = 'Zoho Books';
+                }
+                setStep(2);
+            } else if (urlStatus === 'connected_stripe') {
+                newBanking = 'Stripe';
+                setStep(2);
+            }
+
+            // Cleanup invalid text
+            if (newAccounting === 'Not Connected') newAccounting = 'None';
+            if (newBanking === 'Not Connected') newBanking = 'None';
+
+            setSelectedServices(prev => ({
+                ...prev,
+                accounting: newAccounting || prev.accounting,
+                banking: newBanking || prev.banking,
+                channels: settings?.channels || prev.channels
+            }));
+
+            // Clear URL params so it doesn't trigger again on refresh
+            if (urlStatus) {
+                router.replace('/onboarding');
             }
         };
 
-        fetchProgress();
-    }, [supabase, searchParams]);
-
-    // 2. Handle OAuth Callbacks
-    useEffect(() => {
-        const fetchProgress = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
-
-            const { data: settings } = await supabase
-                .from('settings')
-                .select('*')
-                .eq('user_id', user.id)
-                .single();
-
-            if (settings) {
-                setFormData(prev => ({
-                    ...prev,
-                    full_name: settings.full_name || '',
-                    company_name: settings.business_name || '',
-                    company_address: settings.company_address || '',
-                    currency: settings.currency || 'USD',
-                }));
-
-                const updates: any = {};
-                
-                if (settings.business_name) setStep(2);
-
-                // --- FIX: Filter out Ghost Connections ---
-                if (settings.accounting_provider && settings.accounting_provider !== 'Not Connected') {
-                    if (settings.accounting_provider === 'Zoho Books' && settings.zoho_connected === false) {
-                        updates.accounting = 'None'; // Ignore ghost connection
-                    } else {
-                        updates.accounting = settings.accounting_provider;
-                    }
-                }
-
-                if (settings.banking_provider && settings.banking_provider !== 'Not Connected') {
-                    if (settings.banking_provider === 'Stripe' && settings.stripe_connected === false) {
-                        updates.banking = 'None'; // Ignore ghost connection
-                    } else {
-                        updates.banking = settings.banking_provider;
-                    }
-                }
-
-                if (settings.channels && settings.channels.length > 0) {
-                    updates.channels = settings.channels;
-                }
-
-                if (Object.keys(updates).length > 0) {
-                    setSelectedServices(prev => ({ ...prev, ...updates }));
-                }
-                
-                const status = searchParams.get('status');
-                if(!status && settings.business_name) setStep(2);
-            }
-        };
-
-        fetchProgress();
-    }, [supabase, searchParams]);
+        loadState();
+    }, [supabase, searchParams, router]);
 
     // --- ACTIONS ---
 
