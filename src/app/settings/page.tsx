@@ -23,15 +23,15 @@ interface Integration {
 
 // ─── Static Data ──────────────────────────────────────────────────────────────
 const ACCOUNTING: Integration[] = [
-  { id: 'zoho',        name: 'Zoho Books', description: 'Two-way sync of invoices & expenses', logo: 'https://logo.clearbit.com/zoho.com',              category: 'accounting', available: true  },
-  { id: 'xero',        name: 'Xero',       description: 'Two-way sync of invoices & expenses', logo: 'https://logo.clearbit.com/xero.com',              category: 'accounting', available: true  },
-  { id: 'quickbooks',  name: 'QuickBooks', description: 'Coming soon',                         logo: 'https://logo.clearbit.com/quickbooks.intuit.com', category: 'accounting', available: false },
+  { id: 'zoho',        name: 'Zoho Books', description: 'Two-way sync of invoices & expenses', logo: 'https://www.google.com/s2/favicons?domain=zoho.com&sz=64',              category: 'accounting', available: true  },
+  { id: 'xero',        name: 'Xero',       description: 'Two-way sync of invoices & expenses',logo: 'https://www.google.com/s2/favicons?domain=xero.com&sz=64',              category: 'accounting', available: true  },
+  { id: 'quickbooks',  name: 'QuickBooks', description: 'Coming soon',                         logo:'https://www.google.com/s2/favicons?domain=intuit.com&sz=64', category: 'accounting', available: false },
 ];
 
 const BANKING: Integration[] = [
-  { id: 'stripe',   name: 'Stripe',   description: 'Payments, payouts & reconciliation', logo: 'https://logo.clearbit.com/stripe.com',   category: 'banking', available: true  },
-  { id: 'razorpay', name: 'Razorpay', description: 'Coming soon',                        logo: 'https://logo.clearbit.com/razorpay.com', category: 'banking', available: false },
-  { id: 'paypal',   name: 'PayPal',   description: 'Coming soon',                        logo: 'https://logo.clearbit.com/paypal.com',   category: 'banking', available: false },
+  { id: 'stripe',   name: 'Stripe',   description: 'Payments, payouts & reconciliation', logo: 'https://www.google.com/s2/favicons?domain=stripe.com&sz=64',   category: 'banking', available: true  },
+  { id: 'razorpay', name: 'Razorpay', description: 'Coming soon',                        logo: 'https://www.google.com/s2/favicons?domain=razorpay.com&sz=64', category: 'banking', available: false },
+  { id: 'paypal',   name: 'PayPal',   description: 'Coming soon',                        logo: 'https://www.google.com/s2/favicons?domain=paypal.com&sz=64',   category: 'banking', available: false },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -382,7 +382,7 @@ function SettingsContent() {
       let slug = integration.id;
       if (slug === 'zoho') slug = 'zoho';
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'}/auth/${slug}/login?user_id=${user.id}`
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'}/auth/${slug}/login?user_id=${user.id}&return_to=/settings`
       );
       if (!res.ok) throw new Error('Not implemented');
       const data = await res.json();
