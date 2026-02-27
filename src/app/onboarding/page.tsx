@@ -119,20 +119,61 @@ function OnboardingContent() {
 
     // 2. Handle OAuth Callbacks
     useEffect(() => {
-        const status = searchParams.get('status');
-        const provider = searchParams.get('provider');
+        const fetchProgress = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
 
-        if (status === 'connected') {
-            const connectedProvider = provider ? decodeURIComponent(provider) : 'Connected Service';
-            setSelectedServices(prev => ({ ...prev, accounting: connectedProvider }));
-            setStep(2);
-            router.replace('/onboarding');
-        } else if (status === 'connected_stripe') {
-            setSelectedServices(prev => ({ ...prev, banking: 'Stripe' }));
-            setStep(2);
-            router.replace('/onboarding');
-        }
-    }, [searchParams, router]);
+            const { data: settings } = await supabase
+                .from('settings')
+                .select('*')
+                .eq('user_id', user.id)
+                .single();
+
+            if (settings) {
+                setFormData(prev => ({
+                    ...prev,
+                    full_name: settings.full_name || '',
+                    company_name: settings.business_name || '',
+                    company_address: settings.company_address || '',
+                    currency: settings.currency || 'USD',
+                }));
+
+                const updates: any = {};
+                
+                if (settings.business_name) setStep(2);
+
+                // --- FIX: Filter out Ghost Connections ---
+                if (settings.accounting_provider && settings.accounting_provider !== 'Not Connected') {
+                    if (settings.accounting_provider === 'Zoho Books' && settings.zoho_connected === false) {
+                        updates.accounting = 'None'; // Ignore ghost connection
+                    } else {
+                        updates.accounting = settings.accounting_provider;
+                    }
+                }
+
+                if (settings.banking_provider && settings.banking_provider !== 'Not Connected') {
+                    if (settings.banking_provider === 'Stripe' && settings.stripe_connected === false) {
+                        updates.banking = 'None'; // Ignore ghost connection
+                    } else {
+                        updates.banking = settings.banking_provider;
+                    }
+                }
+
+                if (settings.channels && settings.channels.length > 0) {
+                    updates.channels = settings.channels;
+                }
+
+                if (Object.keys(updates).length > 0) {
+                    setSelectedServices(prev => ({ ...prev, ...updates }));
+                }
+                
+                const status = searchParams.get('status');
+                if(!status && settings.business_name) setStep(2);
+            }
+        };
+
+        fetchProgress();
+    }, [supabase, searchParams]);
 
     // --- ACTIONS ---
 
