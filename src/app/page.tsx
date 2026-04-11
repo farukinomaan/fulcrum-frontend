@@ -62,7 +62,7 @@ export default function Home() {
     burn_rate: 0,
     runway: 0,
     revenue: 0,
-    currency: 'SAR',
+    currency: '',
     providers: {
         accounting: 'Accounting', 
         banking: 'Bank'
