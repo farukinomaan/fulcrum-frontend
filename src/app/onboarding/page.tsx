@@ -20,16 +20,16 @@ interface ServiceItem {
 
 // --- STATIC DATA ---
 const accountingOptions: ServiceItem[] = [
-    { id: 'zoho', name: 'Zoho Books', description: 'Two-way sync', logo: 'https://logo.clearbit.com/zoho.com' },
-    { id: 'xero', name: 'Xero', description: 'Two-way sync', logo: 'https://logo.clearbit.com/xero.com' },
-    { id: 'quickbooks', name: 'QuickBooks', description: 'Coming soon', badge: 'Soon', logo: 'https://logo.clearbit.com/quickbooks.intuit.com' },
+    { id: 'zoho', name: 'Zoho Books', description: 'Two-way sync', logo: 'https://www.google.com/s2/favicons?domain=zoho.com&sz=128' },
+    { id: 'xero', name: 'Xero', description: 'Two-way sync', logo: 'https://www.google.com/s2/favicons?domain=xero.com&sz=128' },
+    { id: 'quickbooks', name: 'QuickBooks', description: 'Coming soon', badge: 'Soon', logo: 'https://www.google.com/s2/favicons?domain=quickbooks.intuit.com&sz=128' },
     { id: 'none', name: 'None', description: 'Manual / Spreadsheet', logo: null }
 ];
 
 const bankingOptions: ServiceItem[] = [
-    { id: 'stripe', name: 'Stripe', description: 'Payments & payouts', logo: 'https://logo.clearbit.com/stripe.com' },
-    { id: 'razorpay', name: 'Razorpay', description: 'Coming soon', badge: 'Soon', logo: 'https://logo.clearbit.com/razorpay.com' },
-    { id: 'paypal', name: 'PayPal', description: 'Coming soon', badge: 'Soon', logo: 'https://logo.clearbit.com/paypal.com' },
+    { id: 'stripe', name: 'Stripe', description: 'Payments & payouts', logo: 'https://www.google.com/s2/favicons?domain=stripe.com&sz=128' },
+    { id: 'razorpay', name: 'Razorpay', description: 'Coming soon', badge: 'Soon', logo: 'https://www.google.com/s2/favicons?domain=razorpay.com&sz=128' },
+    { id: 'paypal', name: 'PayPal', description: 'Coming soon', badge: 'Soon', logo: 'https://www.google.com/s2/favicons?domain=paypal.com&sz=128' },
     { id: 'none', name: 'None', description: 'Manual reconciliation', logo: null }
 ];
 
