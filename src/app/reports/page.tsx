@@ -26,7 +26,7 @@ export default function ReportsPage() {
         revenue: 0,
         expenses: 0,
         net_income: 0,
-        currency: 'SAR', // Added currency to report data
+        currency: '', 
         ai_insights: {
             headline: "Ready to Generate",
             summary: "Click the generate button to analyze your latest financial data using Fulcrum AI.",

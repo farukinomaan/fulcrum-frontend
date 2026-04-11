@@ -6,7 +6,7 @@ import {
   User, CreditCard, Bell, Shield, LogOut,
   CheckCircle2, AlertCircle, Activity, FileText,
   MessageSquare, Settings as SettingsIcon, ChevronRight,
-  Loader2, RefreshCw, XCircle, Check, Plug, Unplug, BookOpen, Wallet
+  Loader2, RefreshCw, XCircle, Zap, Check, Plug, Unplug, BookOpen, Wallet
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
@@ -451,6 +451,7 @@ function SettingsContent() {
           <NavItem icon={<Activity />}     label="Live Feed"    onClick={() => navigateTo('/')} />
           <NavItem icon={<CreditCard />}   label="Transactions" onClick={() => navigateTo('/?view=transactions')} />
           <NavItem icon={<FileText />}     label="Reports"      onClick={() => navigateTo('/reports')} />
+          <NavItem icon={<Zap />} label="Automations" onClick={() => router.push('/automations')} />
           <NavItem icon={<MessageSquare />}label="Ask Fulcrum"  onClick={() => navigateTo('/chat')} />
         </nav>
         <div className="p-4 border-t border-neutral-100">

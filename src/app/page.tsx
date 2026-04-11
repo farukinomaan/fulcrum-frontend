@@ -311,9 +311,9 @@ export default function Home() {
             onClick={() => router.push('/chat')}
           />
         </nav>
-        <div className="pt-4 mt-4 border-t border-slate-100">
-          <NavItem icon={<Settings />} label="Settings" onClick={() => router.push('/settings')} />
-        </div>
+        <div className="pt-4 mt-4 border-t border-slate-100 p-4">
+                    <NavItem icon={<Settings />} label="Settings" onClick={() => router.push('/settings')} />
+                </div>
         {/* Sarah Jenkins section removed as requested */}
       </div>
 
