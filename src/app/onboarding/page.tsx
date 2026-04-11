@@ -77,17 +77,18 @@ function ServiceCard({
                 ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}
             `}
         >
-            {/* Logo */}
-            <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
+            {/* Logo - Added a white background block when selected */}
+            <div className={`flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-md transition-colors ${isSelected ? "bg-white shadow-sm" : ""}`}>
                 {opt.logo ? (
                     <img
                         src={opt.logo}
                         alt={`${opt.name} logo`}
-                        className={`w-7 h-7 object-contain rounded-md ${isSelected ? "brightness-0 invert" : ""}`}
+                        // Removed the invert hack, slightly adjusted sizing for padding
+                        className="w-6 h-6 object-contain"
                         onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                     />
                 ) : (
-                    <div className={`w-7 h-7 rounded-md flex items-center justify-center text-xs font-bold ${isSelected ? "bg-white/20 text-white" : "bg-neutral-100 text-neutral-400"}`}>—</div>
+                    <div className={`w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold ${isSelected ? "text-neutral-900" : "bg-neutral-100 text-neutral-400"}`}>—</div>
                 )}
             </div>
 
