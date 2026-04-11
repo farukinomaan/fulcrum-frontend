@@ -1,51 +1,214 @@
-// Force Vercel Rebuild - Attempt 2
-
 'use client';
 
-import { useState, useEffect, Suspense, ReactNode } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
+import Image from 'next/image';
+import {
+    ChevronRight, Building2, User, Phone,
+    Globe, Wallet, Loader2, BookOpen, CreditCard, ArrowLeft, Check
+} from 'lucide-react';
 
 // --- TYPESCRIPT INTERFACES ---
 interface ServiceItem {
+    id: string;
     name: string;
-    description?: string;
-    icon: ReactNode;
+    description: string;
+    badge?: string;
+    logo?: string | null;
 }
 
-// --- STATIC DATA (Moved Outside Component) ---
-const accountingServices: ServiceItem[] = [
-    { name: 'Zoho Books', description: 'Best for automation', icon: <svg className="w-8 h-8" viewBox="0 0 24 24" fill="currentColor"><path d="M2 3h20v18H2V3zm2 2v14h16V5H4zm2 2h12v2H6V7zm0 4h12v2H6v-2zm0 4h8v2H6v-2z" /></svg> },
-    { name: 'Xero', description: 'Cloud accounting', icon: <svg className="w-8 h-8" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" /></svg> },
-    { name: 'QuickBooks', description: 'Industry standard', icon: <svg className="w-8 h-8" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14h-2v-4H8V7h6v10z" /></svg> },
-    { name: 'FreshBooks', description: 'For freelancers', icon: <svg className="w-8 h-8" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" /></svg> },
-    { name: 'None', description: 'I use spreadsheets', icon: <svg className="w-8 h-8 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg> }
+// --- STATIC DATA ---
+const accountingOptions: ServiceItem[] = [
+    { id: 'zoho', name: 'Zoho Books', description: 'Two-way sync', logo: 'https://logo.clearbit.com/zoho.com' },
+    { id: 'xero', name: 'Xero', description: 'Two-way sync', logo: 'https://logo.clearbit.com/xero.com' },
+    { id: 'quickbooks', name: 'QuickBooks', description: 'Coming soon', badge: 'Soon', logo: 'https://logo.clearbit.com/quickbooks.intuit.com' },
+    { id: 'none', name: 'None', description: 'Manual / Spreadsheet', logo: null }
 ];
 
-const bankingServices: ServiceItem[] = [
-    { name: 'Stripe', icon: <svg className="w-8 h-8 text-[#635BFF]" viewBox="0 0 24 24" fill="currentColor"><path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.594-7.305h.003z" /></svg> },
-    { name: 'Razorpay', icon: <svg className="w-8 h-8 text-[#3395FF]" viewBox="0 0 24 24" fill="currentColor"><path d="M2.2 10.2l8.2-5.4 7.5 4.8v6.8h-4.3v-4.1l-3.2-2-3.2 2v4.1H2.2v-6.2z" /></svg> },
-    { name: 'Moyasar', icon: <svg className="w-8 h-8 text-[#004CFF]" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zm0 9l2-1-2-1-2 1 2 1zm0-3.5L6 7l6 3 6-3-6-2.5zM2 17l10 5 10-5M2 12l10 5 10-5" /></svg> },
-    { name: 'Square', icon: <svg className="w-8 h-8 text-black" viewBox="0 0 24 24" fill="currentColor"><path d="M5.5 5.5h13v13h-13v-13zM2 2v20h20V2h-20zm16.5 16.5h-13v-13h13v13zM9.5 9.5h5v5h-5v-5z" /></svg> },
-    { name: 'Shopify Pay', icon: <svg className="w-8 h-8 text-[#95BF47]" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4v16h16V4zm-2 14H6V6h12v12zM8 8h8v2H8V8z" /></svg> },
-    { name: 'PayPal', icon: <svg className="w-8 h-8 text-[#003087]" viewBox="0 0 24 24" fill="currentColor"><path d="M9 19c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-9h-6v9z" /><path d="M21 4H3c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2z" /></svg> }
+const bankingOptions: ServiceItem[] = [
+    { id: 'stripe', name: 'Stripe', description: 'Payments & payouts', logo: 'https://logo.clearbit.com/stripe.com' },
+    { id: 'razorpay', name: 'Razorpay', description: 'Coming soon', badge: 'Soon', logo: 'https://logo.clearbit.com/razorpay.com' },
+    { id: 'paypal', name: 'PayPal', description: 'Coming soon', badge: 'Soon', logo: 'https://logo.clearbit.com/paypal.com' },
+    { id: 'none', name: 'None', description: 'Manual reconciliation', logo: null }
 ];
 
-const channelServices: ServiceItem[] = [
-    { name: 'WhatsApp', icon: <svg className="w-8 h-8" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" /></svg> },
-    { name: 'Slack', icon: <svg className="w-8 h-8" viewBox="0 0 24 24" fill="currentColor"><path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zm1.271 0a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zm0 1.271a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zm10.122 2.521a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zm-1.268 0a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zm-2.523 10.122a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zm0-1.268a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z" /></svg> },
-    { name: 'Email', icon: <svg className="w-8 h-8" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" /></svg> },
-    { name: 'SMS', icon: <svg className="w-8 h-8" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM9 11H7V9h2v2zm4 0h-2V9h2v2zm4 0h-2V9h2v2z" /></svg> }
+const countryCodes = [
+    { code: '+1', country: 'US/CA' },
+    { code: '+44', country: 'UK' },
+    { code: '+91', country: 'IN' },
+    { code: '+966', country: 'SA' },
+    { code: '+971', country: 'UAE' },
+    { code: '+61', country: 'AU' },
+    { code: '+49', country: 'DE' },
 ];
 
+const STEPS = [
+    { id: 1, label: 'Your Details', sublabel: 'Name, company & currency' },
+    { id: 2, label: 'Connect Tools', sublabel: 'Accounting & payments' },
+];
+
+// ------------------------------------------------------------------
+// SERVICE CARD
+// ------------------------------------------------------------------
+function ServiceCard({
+    opt,
+    isSelected,
+    isLoading,
+    onClick,
+    disabled,
+}: {
+    opt: ServiceItem;
+    isSelected: boolean;
+    isLoading: boolean;
+    onClick: () => void;
+    disabled?: boolean;
+}) {
+    return (
+        <button
+            onClick={onClick}
+            disabled={isLoading || disabled}
+            className={`
+                group relative flex items-center gap-3 p-4 rounded-xl border-2 transition-all duration-200 text-left w-full
+                ${isSelected
+                    ? 'border-neutral-900 bg-neutral-900 shadow-lg'
+                    : 'border-neutral-200 bg-white hover:border-neutral-300 hover:shadow-sm'
+                }
+                ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}
+            `}
+        >
+            {/* Logo */}
+            <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
+                {opt.logo ? (
+                    <img
+                        src={opt.logo}
+                        alt={`${opt.name} logo`}
+                        className={`w-7 h-7 object-contain rounded-md ${isSelected ? "brightness-0 invert" : ""}`}
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                    />
+                ) : (
+                    <div className={`w-7 h-7 rounded-md flex items-center justify-center text-xs font-bold ${isSelected ? "bg-white/20 text-white" : "bg-neutral-100 text-neutral-400"}`}>—</div>
+                )}
+            </div>
+
+            {/* Text */}
+            <div className="flex-1 min-w-0">
+                <p className={`font-medium text-sm leading-tight ${isSelected ? 'text-white' : 'text-neutral-900'}`}>
+                    {opt.name}
+                </p>
+                <p className={`text-xs mt-0.5 ${isSelected ? 'text-neutral-300' : 'text-neutral-400'}`}>
+                    {isSelected ? 'Selected' : opt.description}
+                </p>
+            </div>
+
+            {/* State Icon */}
+            <div className="flex-shrink-0">
+                {isLoading ? (
+                    <Loader2 className="w-4 h-4 text-neutral-400 animate-spin" />
+                ) : isSelected ? (
+                    <div className="w-5 h-5 rounded-full bg-white flex items-center justify-center">
+                        <Check className="w-3 h-3 text-neutral-900" strokeWidth={3} />
+                    </div>
+                ) : opt.badge ? (
+                    <span className="text-[10px] font-medium text-neutral-400 border border-neutral-200 px-1.5 py-0.5 rounded-full">
+                        {opt.badge}
+                    </span>
+                ) : null}
+            </div>
+        </button>
+    );
+}
+
+// ------------------------------------------------------------------
+// SIDEBAR STEP INDICATOR
+// ------------------------------------------------------------------
+function StepIndicator({ currentStep }: { currentStep: number }) {
+    return (
+        <div className="flex flex-col gap-0">
+            {STEPS.map((s, i) => {
+                const done = currentStep > s.id;
+                const active = currentStep === s.id;
+                return (
+                    <div key={s.id} className="flex items-start gap-3.5">
+                        <div className="flex flex-col items-center">
+                            <div className={`
+                                w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 transition-all duration-300
+                                ${done ? 'bg-neutral-900 text-white'
+                                    : active ? 'bg-neutral-900 text-white ring-4 ring-neutral-900/10'
+                                        : 'bg-neutral-100 text-neutral-400'}
+                            `}>
+                                {done ? <Check className="w-3.5 h-3.5" strokeWidth={2.5} /> : s.id}
+                            </div>
+                            {i < STEPS.length - 1 && (
+                                <div className={`w-px h-10 mt-1 mb-1 transition-colors duration-300 ${done ? 'bg-neutral-900' : 'bg-neutral-200'}`} />
+                            )}
+                        </div>
+                        <div className="pt-0.5 pb-1">
+                            <p className={`text-sm font-semibold transition-colors ${active || done ? 'text-neutral-900' : 'text-neutral-400'}`}>
+                                {s.label}
+                            </p>
+                            <p className={`text-xs mt-0.5 transition-colors ${active ? 'text-neutral-500' : 'text-neutral-300'}`}>
+                                {s.sublabel}
+                            </p>
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
+// ------------------------------------------------------------------
+// FIELD WRAPPER
+// ------------------------------------------------------------------
+function Field({ label, required, icon: Icon, children }: {
+    label: string; required?: boolean; icon?: any; children: React.ReactNode;
+}) {
+    return (
+        <div>
+            <label className="flex items-center gap-1.5 text-sm font-medium text-neutral-700 mb-2">
+                {Icon && <Icon className="w-3.5 h-3.5 text-neutral-400" />}
+                {label}
+                {required && <span className="text-red-400 ml-0.5">*</span>}
+            </label>
+            {children}
+        </div>
+    );
+}
+
+const inputCls = `
+    w-full px-4 py-3 bg-white border border-neutral-200 rounded-lg
+    focus:border-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/8
+    transition-all text-sm text-neutral-900 placeholder:text-neutral-300
+`;
+
+const selectStyle = {
+    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23737373' d='M10.293 3.293L6 7.586 1.707 3.293A1 1 0 00.293 4.707l5 5a1 1 0 001.414 0l5-5a1 1 0 10-1.414-1.414z'/%3E%3C/svg%3E")`,
+    backgroundRepeat: 'no-repeat' as const,
+    backgroundPosition: 'right 0.75rem center',
+    paddingRight: '2.5rem',
+    appearance: 'none' as const,
+};
+
+// ------------------------------------------------------------------
+// MAIN CONTENT
+// ------------------------------------------------------------------
 function OnboardingContent() {
-    // --- HOOKS ---
     const searchParams = useSearchParams();
     const router = useRouter();
     const supabase = createClient();
 
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState<string | null>(null);
+
+    const [formData, setFormData] = useState({
+        full_name: '',
+        country_code: '+1',
+        phone_number: '',
+        company_name: '',
+        company_address: '',
+        currency: 'USD'
+    });
 
     const [selectedServices, setSelectedServices] = useState<{
         accounting: string | null;
@@ -57,247 +220,412 @@ function OnboardingContent() {
         channels: [],
     });
 
-    // --- OAUTH REDIRECT HANDLING ---
+    // ✅ Run ONCE on mount — read searchParams directly, don't add as dep to avoid re-run loop
     useEffect(() => {
-        const status = searchParams.get('status');
-        if (status === 'connected') {
-            setSelectedServices(prev => ({ ...prev, accounting: 'Zoho Books' }));
-            setStep(2);
-            router.replace('/onboarding');
-        } else if (status === 'connected_stripe') {
-            setSelectedServices(prev => ({ ...prev, accounting: 'Zoho Books', banking: 'Stripe' }));
-            setStep(3);
-            router.replace('/onboarding');
-        } else if (status === 'error') {
-            alert("Connection failed. Please check your credentials.");
-        }
-    }, [searchParams, router]);
+        const loadState = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
 
-    const handleOAuthConnect = async (provider: string, type: 'accounting' | 'banking') => {
+            const { data: settings } = await supabase
+                .from('settings')
+                .select('*')
+                .eq('user_id', user.id)
+                .single();
+
+            // Read URL params here (snapshot at mount)
+            const urlStatus = searchParams.get('status');
+            const urlProvider = searchParams.get('provider');
+
+            let newAccounting: string | null = null;
+            let newBanking: string | null = null;
+
+            if (settings) {
+                setFormData(prev => ({
+                    ...prev,
+                    full_name: settings.full_name || '',
+                    company_name: settings.business_name || '',
+                    company_address: settings.company_address || '',
+                    currency: settings.currency || 'USD',
+                }));
+
+                if (settings.business_name) setStep(2);
+
+                newAccounting = settings.accounting_provider;
+                newBanking = settings.banking_provider;
+
+                // Ghost-connection guard — only filter when DB explicitly says false
+                if (newAccounting === 'Zoho Books' && settings.zoho_connected === false) {
+                    newAccounting = 'None';
+                }
+                if (newBanking === 'Stripe' && settings.stripe_connected === false) {
+                    newBanking = 'None';
+                }
+            }
+
+            // ── URL overrides (returning from OAuth) ──
+            if (urlStatus === 'connected') {
+                let resolvedProvider = urlProvider ? decodeURIComponent(urlProvider) : 'Connected Service';
+                if (resolvedProvider.toLowerCase().replace(/\s+/g, '') === 'zohobooks') {
+                    resolvedProvider = 'Zoho Books';
+                }
+                newAccounting = resolvedProvider;
+                setStep(2);
+
+                // ✅ FIX: Persist immediately so next DB read reflects the connection
+                await supabase.from('settings').upsert({
+                    user_id: user.id,
+                    accounting_provider: resolvedProvider,
+                    zoho_connected: resolvedProvider === 'Zoho Books',
+                }, { onConflict: 'user_id' });
+
+            } else if (urlStatus === 'connected_stripe') {
+                newBanking = 'Stripe';
+                setStep(2);
+
+                // ✅ FIX: Persist Stripe immediately
+                await supabase.from('settings').upsert({
+                    user_id: user.id,
+                    banking_provider: 'Stripe',
+                    stripe_connected: true,
+                }, { onConflict: 'user_id' });
+            }
+
+            // Sanitise stale text values
+            if (newAccounting === 'Not Connected') newAccounting = 'None';
+            if (newBanking === 'Not Connected') newBanking = 'None';
+
+            setSelectedServices(prev => ({
+                ...prev,
+                accounting: newAccounting ?? prev.accounting,
+                banking: newBanking ?? prev.banking,
+                channels: settings?.channels || prev.channels
+            }));
+
+            // Clear URL params after reading them
+            if (urlStatus) {
+                router.replace('/onboarding');
+            }
+        };
+
+        loadState();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // ← intentionally empty: we capture searchParams as a snapshot above
+
+    // --- ACTIONS ---
+
+    const handleSaveDetails = async () => {
+        if (!formData.full_name || !formData.phone_number || !formData.company_name || !formData.currency) {
+            alert("Please fill in all required fields.");
+            return;
+        }
+
+        setLoading('saving');
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { error } = await supabase.from('settings').upsert({
+            user_id: user.id,
+            full_name: formData.full_name,
+            business_name: formData.company_name,
+            company_address: formData.company_address,
+            currency: formData.currency,
+            phone: `${formData.country_code} ${formData.phone_number}`,
+            updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id' });
+
+        setLoading(null);
+        if (error) alert("Error saving: " + error.message);
+        else setStep(2);
+    };
+
+    const handleConnectOAuth = async (provider: string, type: 'accounting' | 'banking') => {
+        if (!provider) return;
+
+        if (provider === 'None') {
+            setSelectedServices(prev => ({ ...prev, [type]: 'None' }));
+            return;
+        }
+
         setLoading(provider);
         try {
             const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return alert("Please log in first");
-            
-            const slug = provider.toLowerCase().replace(/\s+/g, '');
+            if (!user) return alert("Please log in first.");
+
+            let slug = provider.toLowerCase().replace(/\s+/g, '');
+            if (slug === 'zohobooks') slug = 'zoho';
+
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'}/auth/${slug}/login?user_id=${user.id}`);
-            
-            if (!res.ok) throw new Error("Provider not yet implemented in backend");
-            
+            if (!res.ok) throw new Error(`Provider ${provider} not yet implemented`);
+
             const data = await res.json();
             window.location.href = data.url;
         } catch (e) {
             console.error(e);
-            alert(`${provider} integration is coming next! (Backend pending)`);
+            alert(`${provider} integration is coming soon. Please select 'None' or a supported provider.`);
             setLoading(null);
         }
     };
 
-    const toggleChannel = (channel: string) => {
-        setSelectedServices(prev => ({
-            ...prev,
-            channels: prev.channels.includes(channel)
-                ? prev.channels.filter(c => c !== channel)
-                : [...prev.channels, channel]
-        }));
+    const completeOnboarding = async () => {
+        if (!selectedServices.accounting) {
+            alert("Please select an accounting option to continue.");
+            return;
+        }
+
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const isZoho = selectedServices.accounting.toLowerCase().includes('zoho');
+        const isStripe = selectedServices.banking?.toLowerCase().includes('stripe') || false;
+
+        await supabase.from('settings').upsert({
+            user_id: user.id,
+            channels: selectedServices.channels,
+            onboarding_completed: true,
+            accounting_provider: selectedServices.accounting,
+            banking_provider: selectedServices.banking,
+            zoho_connected: isZoho,
+            stripe_connected: isStripe
+        }, { onConflict: 'user_id' });
+
+        router.push('/');
     };
 
-    const saveToSupabase = async (key: string, value: string) => {
-        console.log('Saving to Supabase:', key, value);
-    };
-
+    // ------------------------------------------------------------------
+    // RENDER
+    // ------------------------------------------------------------------
     return (
-        <div className="min-h-screen bg-white p-4 md:p-8">
-            <div className="max-w-5xl mx-auto">
-                <div className="flex items-center justify-between mb-12">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center">
-                            <span className="text-white font-bold text-xl">F</span>
-                        </div>
-                        <h2 className="text-xl font-bold text-black">Fulcrum</h2>
-                    </div>
-                    <div className="text-sm text-gray-500">Step {step} of 4</div>
+        <div className="min-h-screen bg-neutral-50 flex flex-col">
+
+            {/* ── Top Nav ── */}
+            <header className="bg-white border-b border-neutral-100 px-6 py-4 flex items-center justify-between z-10">
+                <div className="flex items-center gap-2.5">
+                    <Image src="/logo.png" alt="Fulcrum" width={26} height={26} className="w-6 h-6" />
+                    <span className="text-base font-semibold text-neutral-900 tracking-tight">Fulcrum</span>
                 </div>
+                {/* Mobile step pill */}
+                <span className="sm:hidden text-xs font-medium text-neutral-500 bg-neutral-100 px-3 py-1.5 rounded-full">
+                    Step {step} of {STEPS.length}
+                </span>
+            </header>
 
-                <div className="mb-16">
-                    <div className="flex items-center justify-between mb-4">
-                        {['Accounting', 'Banking', 'Channels', 'AI Brain'].map((label, idx) => (
-                            <div key={label} className="flex items-center">
-                                <div className={`flex items-center justify-center w-10 h-10 rounded-full font-semibold text-sm transition-all ${step > idx + 1 ? 'bg-black text-white' : step === idx + 1 ? 'bg-black text-white ring-4 ring-gray-200' : 'bg-gray-200 text-gray-400'}`}>
-                                    {step > idx + 1 ? '✓' : idx + 1}
-                                </div>
-                                {idx < 3 && <div className={`h-1 w-16 md:w-32 mx-2 transition-all ${step > idx + 1 ? 'bg-black' : 'bg-gray-200'}`}></div>}
-                            </div>
-                        ))}
+            {/* ── Body ── */}
+            <div className="flex flex-1">
+
+                {/* ── Left Sidebar (desktop) ── */}
+                <aside className="hidden sm:flex flex-col w-60 xl:w-68 bg-white border-r border-neutral-100 px-8 py-10 flex-shrink-0">
+                    <div className="mb-8">
+                        <p className="text-[11px] font-semibold uppercase tracking-widest text-neutral-400 mb-1.5">
+                            Getting Started
+                        </p>
+                        <h2 className="text-lg font-semibold text-neutral-900 leading-snug">
+                            Set up your workspace
+                        </h2>
                     </div>
-                </div>
 
-                {/* --- STEP 1: ACCOUNTING --- */}
-                {step === 1 && (
-                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <div className="text-center mb-12">
-                            <h1 className="text-4xl md:text-5xl font-bold text-black mb-4">Connect your Accounting</h1>
-                            <p className="text-gray-600 text-lg">Where do you manage your invoices and books?</p>
-                        </div>
+                    <StepIndicator currentStep={step} />
 
-                        {!selectedServices.accounting ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                                {accountingServices.map((service) => (
-                                    <button
-                                        key={service.name}
-                                        onClick={() => setSelectedServices(prev => ({ ...prev, accounting: service.name }))}
-                                        className="group p-6 bg-white border-2 border-gray-200 rounded-2xl hover:border-black hover:shadow-xl transition-all duration-300 text-left"
-                                    >
-                                        <div className="flex items-start justify-between mb-4">
-                                            <div className="text-black bg-gray-50 p-3 rounded-xl group-hover:bg-gray-100 transition-colors">
-                                                {service.icon}
-                                            </div>
-                                        </div>
-                                        <span className="font-bold text-lg text-black block">{service.name}</span>
-                                        <span className="text-sm text-gray-500">{service.description}</span>
-                                    </button>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="max-w-md mx-auto bg-gray-50 p-8 rounded-3xl border-2 border-gray-200 animate-in zoom-in-95 duration-300">
-                                <div className="flex items-center gap-3 mb-6">
-                                    <button onClick={() => setSelectedServices(prev => ({ ...prev, accounting: null }))} className="text-gray-400 hover:text-black">
-                                        Back
-                                    </button>
-                                    <h2 className="text-xl font-bold text-black">Connect {selectedServices.accounting}</h2>
-                                </div>
-
-                                {selectedServices.accounting === 'None' ? (
-                                    <div className="text-center py-6">
-                                        <button onClick={() => setStep(2)} className="w-full py-4 bg-black text-white rounded-xl font-bold hover:bg-gray-800 transition-all">Continue to Banking</button>
-                                    </div>
-                                ) : (
-                                    <div className="flex flex-col items-center justify-center py-4">
-                                        <button
-                                            disabled={!!loading}
-                                            onClick={() => handleOAuthConnect(selectedServices.accounting!, 'accounting')}
-                                            className="bg-black text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-gray-800 transition-all flex items-center gap-3 w-full justify-center disabled:opacity-50"
-                                        >
-                                            {loading === selectedServices.accounting ? 'Connecting...' : `Connect ${selectedServices.accounting}`}
-                                        </button>
-                                        <p className="mt-4 text-gray-500 text-sm text-center">
-                                            We'll redirect you to {selectedServices.accounting} to approve access.
-                                        </p>
-                                    </div>
-                                )}
-                            </div>
-                        )}
+                    <div className="mt-auto pt-8 border-t border-neutral-100">
+                        <p className="text-xs text-neutral-400 leading-relaxed">
+                            🔒 Your data is encrypted and never shared with third parties.
+                        </p>
                     </div>
-                )}
+                </aside>
 
-                {/* --- STEP 2: BANKING --- */}
-                {step === 2 && (
-                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <div className="text-center mb-12">
-                            <h1 className="text-4xl md:text-5xl font-bold text-black mb-4">Banking & Payments</h1>
-                            <p className="text-gray-600 text-lg">Connect your banks or payment gateways</p>
-                        </div>
+                {/* ── Main Panel ── */}
+                <main className="flex-1 overflow-y-auto">
+                    <div className="max-w-lg mx-auto px-5 sm:px-10 py-10">
 
-                        {!selectedServices.banking ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                                {bankingServices.map((service) => (
-                                    <button
-                                        key={service.name}
-                                        onClick={() => setSelectedServices(prev => ({ ...prev, banking: service.name }))}
-                                        className="group p-6 bg-white border-2 border-gray-200 rounded-2xl hover:border-black hover:shadow-xl transition-all duration-300"
-                                    >
-                                        <div className="flex flex-col items-center justify-center pt-2">
-                                            <div className="mb-4 transform group-hover:scale-110 transition-transform duration-300">
-                                                {service.icon}
-                                            </div>
-                                            <span className="font-bold text-lg text-black">{service.name}</span>
-                                        </div>
-                                    </button>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="max-w-md mx-auto bg-gray-50 p-8 rounded-3xl border-2 border-gray-200">
-                                <div className="flex items-center gap-3 mb-6">
-                                    <button onClick={() => setSelectedServices(prev => ({ ...prev, banking: null }))} className="text-gray-400 hover:text-black">
-                                        Back
-                                    </button>
-                                    <h2 className="text-xl font-bold text-black">{selectedServices.banking} Credentials</h2>
-                                </div>
-                                <div className="flex flex-col items-center justify-center py-4">
-                                    <button
-                                        disabled={!!loading}
-                                        onClick={() => handleOAuthConnect(selectedServices.banking!, 'banking')}
-                                        className="bg-black text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-gray-800 transition-all flex items-center gap-3 w-full justify-center disabled:opacity-50"
-                                    >
-                                        {loading === selectedServices.banking ? 'Connecting...' : `Connect ${selectedServices.banking}`}
-                                    </button>
-                                    <p className="mt-4 text-gray-500 text-sm text-center">
-                                        We'll redirect you to {selectedServices.banking} to approve access.
+                        {/* ══ STEP 1 ══ */}
+                        {step === 1 && (
+                            <div className="animate-in fade-in slide-in-from-bottom-3 duration-400">
+                                <div className="mb-8">
+                                    <h1 className="text-2xl font-semibold text-neutral-900 mb-2">
+                                        Tell us about your business
+                                    </h1>
+                                    <p className="text-sm text-neutral-500 leading-relaxed">
+                                        We need a few details to personalise your workspace.
                                     </p>
                                 </div>
+
+                                <div className="space-y-5">
+                                    <Field label="Full Name" required icon={User}>
+                                        <input
+                                            type="text"
+                                            value={formData.full_name}
+                                            onChange={e => setFormData({ ...formData, full_name: e.target.value })}
+                                            placeholder="Jane Smith"
+                                            className={inputCls}
+                                        />
+                                    </Field>
+
+                                    <Field label="Phone Number" required icon={Phone}>
+                                        <div className="flex gap-2">
+                                            <select
+                                                value={formData.country_code}
+                                                onChange={e => setFormData({ ...formData, country_code: e.target.value })}
+                                                className="px-3 py-3 bg-white border border-neutral-200 rounded-lg focus:border-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/8 text-sm cursor-pointer"
+                                                style={{ ...selectStyle, paddingRight: '1.8rem' }}
+                                            >
+                                                {countryCodes.map(c => (
+                                                    <option key={c.code} value={c.code}>{c.code} {c.country}</option>
+                                                ))}
+                                            </select>
+                                            <input
+                                                type="tel"
+                                                value={formData.phone_number}
+                                                onChange={e => setFormData({ ...formData, phone_number: e.target.value.replace(/\D/g, '') })}
+                                                placeholder="Mobile number"
+                                                className={`${inputCls} flex-1`}
+                                            />
+                                        </div>
+                                    </Field>
+
+                                    <Field label="Company Name" required icon={Building2}>
+                                        <input
+                                            type="text"
+                                            value={formData.company_name}
+                                            onChange={e => setFormData({ ...formData, company_name: e.target.value })}
+                                            placeholder="Acme Corp"
+                                            className={inputCls}
+                                        />
+                                    </Field>
+
+                                    <Field label="Company Address" icon={Globe}>
+                                        <input
+                                            type="text"
+                                            value={formData.company_address}
+                                            onChange={e => setFormData({ ...formData, company_address: e.target.value })}
+                                            placeholder="City, Country"
+                                            className={inputCls}
+                                        />
+                                    </Field>
+
+                                    <Field label="Reporting Currency" required icon={Wallet}>
+                                        <select
+                                            value={formData.currency}
+                                            onChange={e => setFormData({ ...formData, currency: e.target.value })}
+                                            className={inputCls}
+                                            style={selectStyle}
+                                        >
+                                            <option value="USD">USD — US Dollar</option>
+                                            <option value="EUR">EUR — Euro</option>
+                                            <option value="GBP">GBP — British Pound</option>
+                                            <option value="SAR">SAR — Saudi Riyal</option>
+                                            <option value="AED">AED — UAE Dirham</option>
+                                            <option value="INR">INR — Indian Rupee</option>
+                                        </select>
+                                    </Field>
+                                </div>
+
+                                <button
+                                    onClick={handleSaveDetails}
+                                    disabled={loading === 'saving'}
+                                    className="w-full mt-8 py-3.5 bg-neutral-900 text-white text-sm font-medium rounded-xl hover:bg-neutral-800 active:scale-[.99] transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-sm"
+                                >
+                                    {loading === 'saving'
+                                        ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
+                                        : <>Continue <ChevronRight className="w-4 h-4" /></>
+                                    }
+                                </button>
+
+                                <p className="text-center text-xs text-neutral-400 mt-4">
+                                    You can update these details later in Settings.
+                                </p>
+                            </div>
+                        )}
+
+                        {/* ══ STEP 2 ══ */}
+                        {step === 2 && (
+                            <div className="animate-in fade-in slide-in-from-bottom-3 duration-400 space-y-8">
+                                <div>
+                                    <h1 className="text-2xl font-semibold text-neutral-900 mb-2">
+                                        Connect your tools
+                                    </h1>
+                                    <p className="text-sm text-neutral-500 leading-relaxed">
+                                        Link your software to enable automatic syncing and reconciliation.
+                                    </p>
+                                </div>
+
+                                {/* Accounting Section */}
+                                <section>
+                                    <div className="flex items-center justify-between mb-1">
+                                        <div className="flex items-center gap-2">
+                                            <BookOpen className="w-4 h-4 text-neutral-500" />
+                                            <h3 className="text-sm font-semibold text-neutral-900">Accounting Software</h3>
+                                        </div>
+                                        <span className="text-[11px] font-semibold bg-neutral-900 text-white px-2.5 py-1 rounded-full tracking-wide">
+                                            Required
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-neutral-400 mb-4 ml-6">
+                                        Sync invoices, bills, and expenses automatically.
+                                    </p>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                        {accountingOptions.map(opt => (
+                                            <ServiceCard
+                                                key={opt.id}
+                                                opt={opt}
+                                                isSelected={selectedServices.accounting === opt.name}
+                                                isLoading={loading === opt.name}
+                                                onClick={() => handleConnectOAuth(opt.name, 'accounting')}
+                                                disabled={!!opt.badge && opt.name !== 'None'}
+                                            />
+                                        ))}
+                                    </div>
+                                </section>
+
+                                {/* Banking Section */}
+                                <section>
+                                    <div className="flex items-center justify-between mb-1">
+                                        <div className="flex items-center gap-2">
+                                            <CreditCard className="w-4 h-4 text-neutral-500" />
+                                            <h3 className="text-sm font-semibold text-neutral-900">Banking & Payments</h3>
+                                        </div>
+                                        <span className="text-[11px] font-medium text-neutral-500 border border-neutral-200 bg-white px-2.5 py-1 rounded-full">
+                                            Optional
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-neutral-400 mb-4 ml-6">
+                                        Connect a payment processor for automatic reconciliation.
+                                    </p>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                        {bankingOptions.map(opt => (
+                                            <ServiceCard
+                                                key={opt.id}
+                                                opt={opt}
+                                                isSelected={selectedServices.banking === opt.name}
+                                                isLoading={loading === opt.name}
+                                                onClick={() => handleConnectOAuth(opt.name, 'banking')}
+                                                disabled={!!opt.badge && opt.name !== 'None'}
+                                            />
+                                        ))}
+                                    </div>
+                                </section>
+
+                                {/* Footer CTA */}
+                                <div className="pt-4 border-t border-neutral-100 flex items-center gap-3">
+                                    <button
+                                        onClick={() => setStep(1)}
+                                        className="flex items-center gap-1.5 text-sm text-neutral-400 hover:text-neutral-700 transition-colors px-3 py-2 rounded-lg hover:bg-neutral-100"
+                                    >
+                                        <ArrowLeft className="w-3.5 h-3.5" /> Back
+                                    </button>
+                                    <button
+                                        onClick={completeOnboarding}
+                                        className="flex-1 py-3.5 bg-neutral-900 text-white text-sm font-medium rounded-xl hover:bg-neutral-800 active:scale-[.99] transition-all flex items-center justify-center gap-2 shadow-sm"
+                                    >
+                                        Complete Setup <ChevronRight className="w-4 h-4" />
+                                    </button>
+                                </div>
+
+                                <p className="text-center text-xs text-neutral-400">
+                                    Integrations can be changed at any time in Settings.
+                                </p>
                             </div>
                         )}
                     </div>
-                )}
-
-                {/* --- STEP 3: CHANNELS --- */}
-                {step === 3 && (
-                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <div className="text-center mb-12">
-                            <h1 className="text-4xl md:text-5xl font-bold text-black mb-4">Choose Channels</h1>
-                            <p className="text-gray-600 text-lg">Where should your AI assistant live?</p>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                            {channelServices.map((service) => (
-                                <button
-                                    key={service.name}
-                                    onClick={() => toggleChannel(service.name)}
-                                    className={`group p-8 bg-white border-2 rounded-2xl transition-all duration-300 ${selectedServices.channels.includes(service.name) ? 'border-black shadow-xl scale-105' : 'border-gray-200 hover:border-gray-400'}`}
-                                >
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-5">
-                                            <div className="text-black">{service.icon}</div>
-                                            <span className="font-semibold text-xl text-black">{service.name}</span>
-                                        </div>
-                                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${selectedServices.channels.includes(service.name) ? 'bg-black border-black' : 'border-gray-300'}`}>
-                                            {selectedServices.channels.includes(service.name) && <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
-                                        </div>
-                                    </div>
-                                </button>
-                            ))}
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <button onClick={() => setStep(2)} className="flex items-center gap-2 text-gray-500 hover:text-black transition-colors">Back</button>
-                            <button onClick={() => setStep(4)} disabled={selectedServices.channels.length === 0} className="px-8 py-4 bg-black text-white rounded-xl font-semibold hover:bg-gray-800 transition-all disabled:opacity-50">Continue</button>
-                        </div>
-                    </div>
-                )}
-
-                {/* --- STEP 4: REVIEW --- */}
-                {step === 4 && (
-                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <div className="text-center mb-12">
-                            <h1 className="text-4xl md:text-5xl font-bold text-black mb-4">You're All Set</h1>
-                            <p className="text-gray-600 text-lg">We're setting up your intelligent finance brain</p>
-                        </div>
-                        <div className="max-w-2xl mx-auto">
-                            <div className="bg-white border-2 border-gray-200 rounded-3xl p-12 text-center mb-8">
-                                <div className="w-24 h-24 bg-black rounded-2xl mx-auto mb-6 flex items-center justify-center">
-                                    <span className="text-white text-3xl font-bold">✓</span>
-                                </div>
-                                <h3 className="text-2xl font-bold text-black mb-4">Connected Services</h3>
-                                <div className="space-y-3 mb-8">
-                                    <div className="flex items-center justify-center gap-3 p-4 bg-gray-50 rounded-xl"><span className="font-medium text-black">{selectedServices.accounting}</span></div>
-                                    <div className="flex items-center justify-center gap-3 p-4 bg-gray-50 rounded-xl"><span className="font-medium text-black">{selectedServices.banking}</span></div>
-                                </div>
-                            </div>
-                            <div className="flex items-center justify-between">
-                                <button onClick={() => setStep(3)} className="text-gray-500 hover:text-black">Back</button>
-                                <button onClick={() => router.push('/')} className="px-8 py-4 bg-black text-white rounded-xl font-semibold hover:bg-gray-800">Complete Setup</button>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                </main>
             </div>
         </div>
     );
@@ -305,8 +633,12 @@ function OnboardingContent() {
 
 export default function OnboardingPage() {
     return (
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center bg-neutral-50">
+                <Loader2 className="w-5 h-5 text-neutral-400 animate-spin" />
+            </div>
+        }>
             <OnboardingContent />
         </Suspense>
     );
-} 
+}

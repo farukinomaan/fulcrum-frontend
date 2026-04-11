@@ -1,15 +1,16 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image'; 
 import {
   Send, Bell, CheckCircle2, AlertCircle, Clock,
-  ArrowUpRight, TrendingUp, MessageSquare,
-  Activity as ActivityIcon, FileText, CreditCard,
-  RefreshCw, DollarSign, ShieldCheck, Settings
+  TrendingUp, MessageSquare, Activity as ActivityIcon,
+  FileText, CreditCard, RefreshCw, DollarSign,
+  ShieldCheck, Settings, LogOut, User, Zap
 } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
-import { api } from '@/lib/api';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation'; // <--- Added useSearchParams
+import { api } from '@/lib/api'; 
 
 // --- TYPES ---
 interface Invoice {
@@ -42,21 +43,30 @@ interface Activity {
 
 export default function Home() {
   const router = useRouter();
-  const [activeView, setActiveView] = useState<'feed' | 'transactions'>('feed');
-  const [query, setQuery] = useState('');
+  const searchParams = useSearchParams(); // <--- Capture URL params
+  
+  // FIX 1: Initialize view based on URL param (enables linking from Chat)
+  const initialView = searchParams.get('view') === 'transactions' ? 'transactions' : 'feed';
+  const [activeView, setActiveView] = useState<'feed' | 'transactions'>(initialView);
+  
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   // Real Data State
   const [activities, setActivities] = useState<Activity[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
 
-  // --- DASHBOARD STATS STATE ---
+  // Stats & Dynamic Providers
   const [stats, setStats] = useState({
     cash_on_hand: 0,
     burn_rate: 0,
     runway: 0,
     revenue: 0,
-    currency: 'SAR'
+    currency: 'SAR',
+    providers: {
+        accounting: 'Accounting', 
+        banking: 'Bank'
+    }
   });
 
   const [loadingData, setLoadingData] = useState(false);
@@ -65,62 +75,86 @@ export default function Home() {
   const [reconResult, setReconResult] = useState<any>(null);
 
   const supabase = createClient();
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
   // --- 1. FETCH LIVE FEED & STATS ---
-  useEffect(() => {
-    const fetchInitialData = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+  // Moved to a function so we can call it on Sync without reloading
+  const fetchDashboardData = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
 
-      // A. Fetch Activities
-      const { data } = await supabase
-        .from('activities')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(20);
+    // A. Fetch Activities
+    const { data } = await supabase
+      .from('activities')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(20);
 
-      if (data) {
-        setActivities(data.map((item: any) => ({
-          ...item,
-          timestamp: new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          actionLabel: item.action_label
-        })));
-      }
+    if (data) {
+      setActivities(data.map((item: any) => ({
+        ...item,
+        timestamp: new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        actionLabel: item.action_label
+      })));
+    }
 
-      // B. Fetch Dashboard Stats
-      try {
-        const response = await fetch(`http://localhost:8000/dashboard/stats?user_id=${user.id}`);
+    // B. Fetch Dashboard Stats
+    try {
+      const response = await fetch(`${API_URL}/dashboard/stats?user_id=${user.id}`);
+      if (response.ok) {
         const result = await response.json();
-
         if (result.cards) {
           setStats(prev => ({
             ...prev,
             ...result.cards,
+            providers: result.providers || { accounting: 'Zoho Books', banking: 'Stripe' },
             currency: result.cards.currency || 'SAR'
           }));
         }
-      } catch (e) {
-        console.error("Failed to fetch dashboard stats", e);
       }
+    } catch (e) {
+      console.error("Failed to fetch dashboard stats", e);
+    }
+  };
+
+  useEffect(() => {
+    let channel: any;
+    
+    // Initial Fetch
+    fetchDashboardData();
+
+    // C. Realtime Subscription
+    const setupRealtime = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if(!user) return;
+        
+        channel = supabase
+        .channel(`activities-feed-${user.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'activities',
+            filter: `user_id=eq.${user.id}`
+          },
+          (payload) => {
+            const newItem = payload.new as any;
+            setActivities((prev) => [{
+              ...newItem,
+              timestamp: 'Just now',
+              actionLabel: newItem.action_label
+            }, ...prev]);
+          }
+        )
+        .subscribe();
+    }
+    setupRealtime();
+
+    return () => {
+      if (channel) supabase.removeChannel(channel);
     };
-
-    fetchInitialData();
-
-    // Listen for Realtime Updates
-    const channel = supabase
-      .channel('activities-feed')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'activities' }, (payload) => {
-        const newItem = payload.new as any;
-        setActivities((prev) => [{
-          ...newItem,
-          timestamp: 'Just now',
-          actionLabel: newItem.action_label
-        }, ...prev]);
-      })
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
   }, []);
 
   // --- 2. FETCH TRANSACTIONS (On Tab Switch) ---
@@ -135,16 +169,30 @@ export default function Home() {
       setLoadingData(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const [invData, txnResponse] = await Promise.all([
-          api.getInvoices(user.id),
-          api.getTransactions(user.id)
+        const [invRes, txnRes] = await Promise.all([
+             fetch(`${API_URL}/invoices?user_id=${user.id}`).catch(err => null),
+             fetch(`${API_URL}/transactions?user_id=${user.id}`).catch(err => null)
         ]);
-        setInvoices(invData || []);
 
-        const data = txnResponse as any;
-        if (data && data.transactions) setTransactions(data.transactions);
-        else if (Array.isArray(data)) setTransactions(data);
-        else setTransactions([]);
+        if (invRes && invRes.ok) {
+            const invData = await invRes.json();
+            setInvoices(Array.isArray(invData) ? invData : []);
+        } else {
+            setInvoices([]);
+        }
+
+        if (txnRes && txnRes.ok) {
+            const txnData = await txnRes.json();
+            if (txnData && txnData.transactions) {
+                setTransactions(txnData.transactions);
+            } else if (Array.isArray(txnData)) {
+                setTransactions(txnData);
+            } else {
+                setTransactions([]);
+            }
+        } else {
+            setTransactions([]);
+        }
       }
     } catch (error) {
       console.error("Failed to fetch real data", error);
@@ -160,12 +208,20 @@ export default function Home() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return alert("Please log in first");
 
-      // Call the Python Backend
-      await fetch(`http://localhost:8000/dashboard/sync?user_id=${user.id}`, {
+      const res = await fetch(`${API_URL}/dashboard/sync?user_id=${user.id}`, {
         method: 'POST'
       });
-
-      if (activeView === 'transactions') loadRealData();
+      
+      const result = await res.json();
+      if(result.status === 'error') {
+          alert("Sync Failed: " + result.message);
+      } else {
+          // FIX 2: Do NOT reload page. Just re-fetch data to keep current view.
+          await fetchDashboardData(); 
+          if (activeView === 'transactions') {
+              await loadRealData();
+          }
+      }
 
     } catch (e) {
       console.error(e);
@@ -179,28 +235,36 @@ export default function Home() {
     setReconLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
-      const result = await api.runReconciliation(user.id);
-      setReconResult(result);
-      await loadRealData();
-      setReconLoading(false);
-      setTimeout(() => setReconResult(null), 5000);
+      try {
+          const result = await api.runReconciliation(user.id);
+          setReconResult(result);
+          await loadRealData();
+      } catch (e) {
+          console.error("Reconciliation failed", e);
+      } finally {
+          setReconLoading(false);
+          setTimeout(() => setReconResult(null), 5000);
+      }
     }
   };
 
-  const handleTestFeed = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
+  };
 
-    const { error } = await supabase.from('activities').insert({
-      user_id: user.id,
-      type: 'anomaly',
-      source: 'System Test',
-      title: 'Test Notification',
-      description: 'This is a test to verify the Live Feed is working.',
-      action_label: 'Dismiss'
+  // FIX 3: Helper to switch views and update URL without reloading
+  const handleViewChange = (view: 'feed' | 'transactions') => {
+    setActiveView(view);
+    const newUrl = view === 'transactions' ? '/?view=transactions' : '/';
+    window.history.pushState({}, '', newUrl);
+  };
+
+  const formatMoney = (amount: number) => {
+    return Number(amount).toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
     });
-
-    if (error) alert("Feed Write Error: " + error.message);
   };
 
   return (
@@ -209,30 +273,36 @@ export default function Home() {
       {/* SIDEBAR */}
       <div className="w-64 bg-white border-r border-slate-200 hidden md:flex flex-col fixed h-full z-20">
         <div className="p-6 border-b border-slate-100">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white font-bold">F</div>
+          <div className="flex items-center gap-3">
+            <Image src="/logo.png" alt="Fulcrum Logo" width={32} height={32} className="w-8 h-8" />
             <span className="font-semibold text-lg tracking-tight">Fulcrum</span>
           </div>
         </div>
 
         <nav className="flex-1 p-4 space-y-1">
+          {/* FIX 4: Use handleViewChange instead of simple state set */}
           <NavItem
             icon={<ActivityIcon />}
             label="Live Feed"
             active={activeView === 'feed'}
-            onClick={() => setActiveView('feed')}
+            onClick={() => handleViewChange('feed')}
           />
           <NavItem
             icon={<CreditCard />}
             label="Transactions"
             active={activeView === 'transactions'}
-            onClick={() => setActiveView('transactions')}
+            onClick={() => handleViewChange('transactions')}
           />
-          {/* --- UPDATED: Reports Link --- */}
           <NavItem
             icon={<FileText />}
             label="Reports"
             onClick={() => router.push('/reports')}
+          />
+
+          <NavItem
+            icon={<Zap />}
+            label="Automations"
+            onClick={() => router.push('/automations')}
           />
 
           <NavItem
@@ -241,22 +311,10 @@ export default function Home() {
             onClick={() => router.push('/chat')}
           />
         </nav>
-        <div className="pt-4 mt-4 border-t border-slate-100">
-          <NavItem icon={<Settings />} label="Settings" onClick={() => router.push('/settings')} />
-        </div>
-
-        <div className="p-4 border-t border-slate-100">
-          <div className="bg-slate-900 rounded-xl p-4 text-white">
-            <div className="text-xs text-slate-400 uppercase font-semibold mb-1">Your Partner</div>
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-xs font-bold">SJ</div>
-              <div>
-                <div className="text-sm font-medium">Sarah Jenkins</div>
-                <div className="text-xs text-slate-400">Accountant</div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <div className="pt-4 mt-4 border-t border-slate-100 p-4">
+                    <NavItem icon={<Settings />} label="Settings" onClick={() => router.push('/settings')} />
+                </div>
+        {/* Sarah Jenkins section removed as requested */}
       </div>
 
       {/* MAIN CONTENT */}
@@ -268,9 +326,32 @@ export default function Home() {
             <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
             <span className="text-sm font-medium text-slate-600">Books are audit-ready</span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 relative">
             <button className="p-2 text-slate-400 hover:text-slate-600 transition-colors relative"><Bell className="w-5 h-5" /></button>
-            <div className="w-8 h-8 rounded-full bg-slate-200 border border-slate-300"></div>
+            
+            <div className="relative">
+              <button 
+                onClick={() => setIsProfileOpen(!isProfileOpen)}
+                className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center font-bold text-xs hover:ring-2 hover:ring-gray-200 transition-all focus:outline-none"
+              >
+                ME
+              </button>
+
+              {isProfileOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 py-1 z-50 animate-in fade-in zoom-in-95 duration-200">
+                   <div className="px-4 py-3 border-b border-slate-100">
+                      <p className="text-sm font-medium text-slate-900">My Account</p>
+                   </div>
+                   <button onClick={() => router.push('/settings')} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors">
+                      <Settings className="w-4 h-4" /> Settings
+                   </button>
+                   <button onClick={handleSignOut} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors">
+                      <LogOut className="w-4 h-4" /> Sign Out
+                   </button>
+                </div>
+              )}
+            </div>
+
           </div>
         </header>
 
@@ -289,12 +370,12 @@ export default function Home() {
                 />
                 <StatCard
                   label="Cash on Hand"
-                  value={`${stats.currency} ${stats.cash_on_hand.toLocaleString()}`}
+                  value={`${stats.currency} ${formatMoney(stats.cash_on_hand)}`}
                   trend="-1.2%"
                 />
                 <StatCard
                   label="Burn Rate"
-                  value={`${stats.currency} ${stats.burn_rate.toLocaleString()}`}
+                  value={`${stats.currency} ${formatMoney(stats.burn_rate)}`}
                   trend="Stable"
                   positive
                 />
@@ -307,7 +388,7 @@ export default function Home() {
                     <ActivityIcon className="w-5 h-5" /> Activity Stream
                   </h3>
                   <div className="flex items-center gap-2">
-                    <button onClick={handleTestFeed} className="text-xs font-medium text-slate-500 bg-white border border-slate-200 px-2 py-1 rounded hover:bg-slate-50">Test Feed</button>
+                    {/* FIX 5: Removed Test Feed Button */}
                     <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded border border-emerald-100">Live</span>
                   </div>
                 </div>
@@ -329,11 +410,11 @@ export default function Home() {
               <div className="flex items-center justify-between mb-8">
                 <div>
                   <h2 className="text-2xl font-semibold text-slate-900">Real-Time Data</h2>
-                  <p className="text-sm text-slate-500">Synced from Zoho & Stripe</p>
+                  <p className="text-sm text-slate-500">Synced from {stats.providers.accounting} & {stats.providers.banking}</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <button onClick={handleRefresh} disabled={syncing} className="flex items-center gap-2 text-sm px-4 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 disabled:opacity-50 shadow-sm">
-                    <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} /> {syncing ? 'Syncing...' : 'Sync Zoho'}
+                    <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} /> {syncing ? `Sync ${stats.providers.accounting}` : `Sync ${stats.providers.accounting}`}
                   </button>
                   <button onClick={handleReconcile} disabled={reconLoading} className="flex items-center gap-2 text-sm px-4 py-2 rounded-lg bg-black text-white hover:bg-slate-800 disabled:opacity-50 shadow-sm">
                     <RefreshCw className={`w-4 h-4 ${reconLoading ? 'animate-spin' : ''}`} /> {reconLoading ? 'Reconciling...' : 'Reconcile Now'}
@@ -345,20 +426,38 @@ export default function Home() {
                 <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-8 w-8 border-2 border-slate-300 border-t-black"></div></div>
               ) : (
                 <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                    <DataMetric label="Total Revenue" value={invoices.reduce((s, i) => s + Number(i.total_amount), 0)} icon={<TrendingUp className="text-green-600" />} />
-                    <DataMetric label="Outstanding" value={invoices.filter(i => i.status !== 'paid').reduce((s, i) => s + Number(i.total_amount), 0)} icon={<Clock className="text-amber-600" />} />
-                    <DataMetric label="Matched" value={`${transactions.filter(t => t.reconciliation_status === 'matched').length}/${transactions.length}`} icon={<DollarSign className="text-blue-600" />} />
-                    <DataMetric label="Compliance" value="ZATCA Ready" icon={<ShieldCheck className="text-green-600" />} textOnly />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+                    {/* FIX 6: Updated Logic & Dynamic Currency */}
+                    
+                    {/* Revenue = Only PAID invoices */}
+                    <DataMetric 
+                        label="Total Revenue" 
+                        value={`${stats.currency} ${formatMoney(invoices.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.total_amount), 0))}`} 
+                        icon={<TrendingUp className="text-green-600" />} 
+                    />
+                    
+                    {/* Outstanding = Only UNPAID invoices */}
+                    <DataMetric 
+                        label="Outstanding" 
+                        value={`${stats.currency} ${formatMoney(invoices.filter(i => i.status !== 'paid').reduce((s, i) => s + Number(i.total_amount), 0))}`} 
+                        icon={<Clock className="text-amber-600" />} 
+                    />
+                    
+                    <DataMetric 
+                        label="Matched" 
+                        value={`${transactions.filter(t => t.reconciliation_status === 'matched').length}/${transactions.length}`} 
+                        icon={<DollarSign className="text-blue-600" />} 
+                    />
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                      <div className="px-5 py-4 border-b border-slate-200 flex justify-between bg-slate-50/50">
+                    {/* INVOICE CARD */}
+                    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm h-[500px] flex flex-col">
+                      <div className="px-5 py-4 border-b border-slate-200 flex justify-between bg-slate-50/50 shrink-0">
                         <h3 className="font-semibold text-sm">Recent Invoices</h3>
-                        <span className="text-xs text-slate-500">Zoho Books</span>
+                        <span className="text-xs text-slate-500">{stats.providers.accounting}</span>
                       </div>
-                      <div className="divide-y divide-slate-100 max-h-[500px] overflow-auto">
+                      <div className="divide-y divide-slate-100 overflow-auto flex-1">
                         {invoices.length === 0 && <div className="p-10 text-sm text-slate-400 text-center">No invoices found.</div>}
                         {invoices.map(inv => (
                           <div key={inv.id} className="p-4 hover:bg-slate-50 flex justify-between items-center group">
@@ -370,7 +469,7 @@ export default function Home() {
                               <div className="text-xs text-slate-500 mt-0.5">{inv.issue_date}</div>
                             </div>
                             <div className="text-right">
-                              <div className="font-semibold text-slate-900">{Number(inv.total_amount).toLocaleString()}</div>
+                              <div className="font-semibold text-slate-900">{formatMoney(inv.total_amount)}</div>
                               <div className="text-xs text-slate-400">{inv.currency}</div>
                             </div>
                           </div>
@@ -378,12 +477,13 @@ export default function Home() {
                       </div>
                     </div>
 
-                    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                      <div className="px-5 py-4 border-b border-slate-200 flex justify-between bg-slate-50/50">
+                    {/* BANK CARD */}
+                    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm h-[500px] flex flex-col">
+                      <div className="px-5 py-4 border-b border-slate-200 flex justify-between bg-slate-50/50 shrink-0">
                         <h3 className="font-semibold text-sm">Bank Activity</h3>
-                        <span className="text-xs text-slate-500">Stripe / Bank</span>
+                        <span className="text-xs text-slate-500">{stats.providers.banking} / Bank</span>
                       </div>
-                      <div className="divide-y divide-slate-100 max-h-[500px] overflow-auto">
+                      <div className="divide-y divide-slate-100 overflow-auto flex-1">
                         {transactions.length === 0 && <div className="p-10 text-sm text-slate-400 text-center">No transactions found.</div>}
                         {transactions.map(txn => (
                           <div key={txn.id} className="p-4 hover:bg-slate-50 flex justify-between items-center">
@@ -397,7 +497,7 @@ export default function Home() {
                             </div>
                             <div className="text-right">
                               <div className={`font-semibold ${Number(txn.amount) > 0 ? 'text-green-600' : 'text-slate-900'}`}>
-                                {Number(txn.amount).toLocaleString()}
+                                {formatMoney(txn.amount)}
                               </div>
                               <div className="text-xs text-slate-400">{txn.transaction_date}</div>
                             </div>
