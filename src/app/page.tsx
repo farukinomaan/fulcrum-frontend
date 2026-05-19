@@ -9,7 +9,7 @@ import {
   ShieldCheck, Settings, LogOut, User, Zap
 } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
-import { useRouter, useSearchParams } from 'next/navigation'; // <--- Added useSearchParams
+import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api'; 
 
 // --- TYPES ---
@@ -77,7 +77,7 @@ export default function Home() {
   const supabase = createClient();
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-  // --- 1. FETCH LIVE FEED & STATS ---
+  // FETCH LIVE FEED & STATS 
   // Moved to a function so we can call it on Sync without reloading
   const fetchDashboardData = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -157,7 +157,7 @@ export default function Home() {
     };
   }, []);
 
-  // --- 2. FETCH TRANSACTIONS (On Tab Switch) ---
+  // FETCH TRANSACTIONS (On Tab Switch)
   useEffect(() => {
     if (activeView === 'transactions') {
       loadRealData();
@@ -201,7 +201,7 @@ export default function Home() {
     }
   };
 
-  // --- 3. HANDLERS ---
+  // HANDLERS 
   const handleRefresh = async () => {
     setSyncing(true);
     try {
@@ -216,7 +216,7 @@ export default function Home() {
       if(result.status === 'error') {
           alert("Sync Failed: " + result.message);
       } else {
-          // FIX 2: Do NOT reload page. Just re-fetch data to keep current view.
+          // Do NOT reload page. Just re-fetch data to keep current view.
           await fetchDashboardData(); 
           if (activeView === 'transactions') {
               await loadRealData();

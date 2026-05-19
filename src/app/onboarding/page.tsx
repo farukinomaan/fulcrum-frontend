@@ -48,9 +48,8 @@ const STEPS = [
     { id: 2, label: 'Connect Tools', sublabel: 'Accounting & payments' },
 ];
 
-// ------------------------------------------------------------------
+
 // SERVICE CARD
-// ------------------------------------------------------------------
 function ServiceCard({
     opt,
     isSelected,
@@ -120,9 +119,7 @@ function ServiceCard({
     );
 }
 
-// ------------------------------------------------------------------
 // SIDEBAR STEP INDICATOR
-// ------------------------------------------------------------------
 function StepIndicator({ currentStep }: { currentStep: number }) {
     return (
         <div className="flex flex-col gap-0">
@@ -159,9 +156,7 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
     );
 }
 
-// ------------------------------------------------------------------
 // FIELD WRAPPER
-// ------------------------------------------------------------------
 function Field({ label, required, icon: Icon, children }: {
     label: string; required?: boolean; icon?: any; children: React.ReactNode;
 }) {
@@ -191,9 +186,7 @@ const selectStyle = {
     appearance: 'none' as const,
 };
 
-// ------------------------------------------------------------------
 // MAIN CONTENT
-// ------------------------------------------------------------------
 function OnboardingContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -221,7 +214,7 @@ function OnboardingContent() {
         channels: [],
     });
 
-    // ✅ Run ONCE on mount — read searchParams directly, don't add as dep to avoid re-run loop
+    // Run ONCE on mount — read searchParams directly, don't add as dep to avoid re-run loop
     useEffect(() => {
         const loadState = async () => {
             const { data: { user } } = await supabase.auth.getUser();
@@ -272,7 +265,7 @@ function OnboardingContent() {
                 newAccounting = resolvedProvider;
                 setStep(2);
 
-                // ✅ FIX: Persist immediately so next DB read reflects the connection
+                // FIX: Persist immediately so next DB read reflects the connection
                 await supabase.from('settings').upsert({
                     user_id: user.id,
                     accounting_provider: resolvedProvider,
@@ -283,7 +276,7 @@ function OnboardingContent() {
                 newBanking = 'Stripe';
                 setStep(2);
 
-                // ✅ FIX: Persist Stripe immediately
+                // FIX: Persist Stripe immediately
                 await supabase.from('settings').upsert({
                     user_id: user.id,
                     banking_provider: 'Stripe',
@@ -392,9 +385,8 @@ function OnboardingContent() {
         router.push('/');
     };
 
-    // ------------------------------------------------------------------
     // RENDER
-    // ------------------------------------------------------------------
+    // Refactor the code later 
     return (
         <div className="min-h-screen bg-neutral-50 flex flex-col">
 

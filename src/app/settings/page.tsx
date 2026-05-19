@@ -1,3 +1,7 @@
+// Code Refactoring needed in this file 
+
+
+
 'use client';
 
 import React, { useState, useEffect, Suspense } from 'react';
@@ -21,7 +25,7 @@ interface Integration {
   available: boolean;
 }
 
-// ─── Static Data ──────────────────────────────────────────────────────────────
+// Static Data
 const ACCOUNTING: Integration[] = [
   { id: 'zoho',        name: 'Zoho Books', description: 'Two-way sync of invoices & expenses', logo: 'https://www.google.com/s2/favicons?domain=zoho.com&sz=64',              category: 'accounting', available: true  },
   { id: 'xero',        name: 'Xero',       description: 'Two-way sync of invoices & expenses',logo: 'https://www.google.com/s2/favicons?domain=xero.com&sz=64',              category: 'accounting', available: true  },
@@ -34,7 +38,7 @@ const BANKING: Integration[] = [
   { id: 'paypal',   name: 'PayPal',   description: 'Coming soon',                        logo: 'https://www.google.com/s2/favicons?domain=paypal.com&sz=64',   category: 'banking', available: false },
 ];
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// Helpers 
 function getIntegrationByProviderName(name: string | null, list: Integration[]): Integration | null {
   if (!name || name === 'Not Connected' || name === 'None') return null;
   return list.find(i => i.name.toLowerCase() === name.toLowerCase()) ?? null;
@@ -46,7 +50,7 @@ function getLogoForProvider(name: string | null): string | null {
   return match?.logo ?? null;
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// Sub-components 
 
 function NavItem({ icon, label, active = false, onClick }: {
   icon: React.ReactNode; label: string; active?: boolean; onClick?: () => void;
@@ -228,7 +232,7 @@ function FormSelect({ label, value, onChange, options }: {
   );
 }
 
-// ─── Toast ────────────────────────────────────────────────────────────────────
+// Toast
 function Toast({ message, type, onClose }: { message: string; type: 'success' | 'error'; onClose: () => void }) {
   useEffect(() => {
     const t = setTimeout(onClose, 3000);
@@ -250,7 +254,7 @@ function Toast({ message, type, onClose }: { message: string; type: 'success' | 
   );
 }
 
-// ─── Main Settings Content ────────────────────────────────────────────────────
+// Main Settings Content
 function SettingsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -286,7 +290,7 @@ function SettingsContent() {
     setToast({ message, type });
   };
 
-  // ── Load state (handle OAuth callbacks too) ──────────────────────────────
+  // Load state (handle OAuth callbacks too)
   useEffect(() => {
     const init = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -353,7 +357,7 @@ function SettingsContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Save general settings ────────────────────────────────────────────────
+  // Save general settings 
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -374,7 +378,7 @@ function SettingsContent() {
     }
   };
 
-  // ── Connect OAuth ────────────────────────────────────────────────────────
+  // Connect OAuth 
   const handleConnect = async (integration: Integration) => {
     if (!integration.available) return;
     setConnectingId(integration.id);
@@ -393,7 +397,7 @@ function SettingsContent() {
     }
   };
 
-  // ── Disconnect ───────────────────────────────────────────────────────────
+  //  Disconnect 
   const handleDisconnect = async (integration: Integration) => {
     const isAccounting = integration.category === 'accounting';
     const updates: any = { user_id: user.id };

@@ -1,3 +1,5 @@
+// centralized API Client. used Axios to create a dedicated service layer that abstracts all the network communication between my Next.js frontend and FastAPI backend.
+
 import axios from 'axios';
 import { Invoice, Transaction, AgentResponse } from '@/types';
 

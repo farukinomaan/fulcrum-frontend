@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Image from 'next/image'; // <--- Added Image Import
+import Image from 'next/image'; 
 import {
     FileText, Download, TrendingUp, TrendingDown,
     Calendar, ChevronRight, Activity, CreditCard, MessageSquare, CheckCircle2,
-    Settings, LogOut, Zap // <--- Added Settings Import
+    Settings, LogOut, Zap 
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
@@ -14,7 +14,7 @@ export default function ReportsPage() {
     const router = useRouter();
     const supabase = createClient();
 
-    // --- FIX: Dynamic API URL ---
+    // Dynamic API URL
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
     const [generating, setGenerating] = useState(false);
@@ -63,7 +63,7 @@ export default function ReportsPage() {
                 return;
             }
 
-            // --- FIX: Use Dynamic API URL ---
+            // Use Dynamic API URL
             const response = await fetch(`${API_URL}/reports/generate`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
