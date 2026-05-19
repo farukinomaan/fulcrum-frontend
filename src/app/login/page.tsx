@@ -1,3 +1,5 @@
+// Login Page also a Landing Page for new User
+
 'use client';
 
 import React, { useState } from 'react';
@@ -96,7 +98,10 @@ export default function LoginPage() {
            <div className="mt-8 w-16 h-[1px] bg-neutral-300 mx-auto"></div>
         </div>
 
-        {/* Animation (Full Size, No Scaling) */}
+        {/* Animation (Full Size, No Scaling) 
+          - Refactored file lookout component/MergeAnimation.tsx
+        */}
+        
         <div className="w-full max-w-5xl h-[600px] flex items-center justify-center">
            <MergeAnimation />
         </div>

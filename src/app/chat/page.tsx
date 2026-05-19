@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import Image from 'next/image'; // <--- Added Image Import
+import Image from 'next/image'; 
 import {
     Send, Bot, User, ArrowLeft,
     Sparkles, Activity as ActivityIcon,
@@ -11,7 +11,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 
 
-// --- TYPES ---
+// TYPES 
 interface Message {
     id: string;
     role: 'user' | 'assistant';
@@ -24,7 +24,7 @@ export default function ChatPage() {
     const router = useRouter();
     const supabase = createClient();
 
-    // --- CRITICAL FIX: Use Dynamic API URL ---
+    // Use Dynamic API URL BEFORE IT WAS JUST LOCALHOST 
     // This connects to Render in production, ensuring the AI doesn't get stuck on "Typing..."
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -41,7 +41,7 @@ export default function ChatPage() {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-    // Auto-scroll to bottom
+    // Auto-scroll to bottom 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
@@ -54,6 +54,7 @@ export default function ChatPage() {
         }
     }, [input]);
 
+    // Send button
     const handleSend = async () => {
         if (!input.trim()) return;
 
@@ -78,7 +79,7 @@ export default function ChatPage() {
                 throw new Error("You must be logged in to use Fulcrum AI.");
             }
 
-            // --- FIX: Use the variable here instead of hardcoded localhost ---
+            // UsING the dynmaic URL here instead of hardcoded localhost
             const response = await fetch(`${API_URL}/agent/chat`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -131,7 +132,7 @@ export default function ChatPage() {
             <div className="w-64 bg-white border-r border-slate-200 flex-col hidden md:flex">
                 <div className="p-6 border-b border-slate-100">
                     <div className="flex items-center gap-3 cursor-pointer" onClick={() => router.push('/')}>
-                        {/* --- LOGO REPLACEMENT HERE --- */}
+                        {/* LOGO REPLACEMENT HERE */}
                         <Image src="/logo.png" alt="Fulcrum Logo" width={32} height={32} className="w-8 h-8" />
                         <span className="font-semibold text-lg tracking-tight">Fulcrum</span>
                     </div>

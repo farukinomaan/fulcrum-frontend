@@ -1,3 +1,10 @@
+/*"Callback Handler" for an OAuth login flow ("Sign in with Google")
+
+
+Route Handler that completes the OAuth authentication loop. After a user authenticates with a provider like Google, Google redirects them back to my application with a temporary authorization code.
+
+*/
+
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server"; // Your server-side client
 

@@ -1,3 +1,9 @@
+/* 
+=> Allows users to create automation rules and integrate with Gmail APIs .
+*/
+
+
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -47,13 +53,13 @@ export default function AutomationsPage() {
 
     // --- EFFECTS ---
     useEffect(() => {
-        // 1. Check for Gmail Success
+        // Check for Gmail Success
         if (searchParams.get('status') === 'connected') {
             alert("✅ Gmail Connected Successfully!");
             router.replace('/automations'); // Clean URL
         }
 
-        // 2. Fetch Rules
+        // Fetch Rules
         const fetchRules = async () => {
             const { data: { user } } = await supabase.auth.getUser();
             if(!user) {
@@ -77,6 +83,7 @@ export default function AutomationsPage() {
         const { data: { user } } = await supabase.auth.getUser();
         
         try {
+            //takes the user's natural language input
             await fetch(`${API_URL}/automation/create`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -114,6 +121,8 @@ export default function AutomationsPage() {
         }
     };
 
+
+    // allows the user to review the AI's decisions before actually firing off emails
     const handleRunEngine = async () => {
         setRunning(true);
         const { data: { user } } = await supabase.auth.getUser();
@@ -129,7 +138,8 @@ export default function AutomationsPage() {
         }
     };
 
-    // --- NEW: CONNECT GMAIL ---
+    // Connect Gmail
+
     const handleConnectGmail = async () => {
         setConnecting(true);
         const { data: { user } } = await supabase.auth.getUser();
@@ -154,9 +164,8 @@ export default function AutomationsPage() {
         }
     };
 
-    // --- UPDATED: SEND EMAIL ---
+    // SEND EMAIL
     const handleSend = async (log: ExecutionResult, index: number) => {
-        // --- 1. REMOVED POPUP HERE ---
         
         setSendingIndex(index);
         const { data: { user } } = await supabase.auth.getUser();
@@ -167,7 +176,7 @@ export default function AutomationsPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     user_id: user?.id,
-                    // --- 2. REMOVED to_email HERE ---
+                    // REMOVED to_email HERE
                     subject: `Invoice Reminder: ${log.invoice_id}`,
                     body: log.message
                 })
@@ -194,7 +203,8 @@ export default function AutomationsPage() {
             setSendingIndex(null);
         }
     };
-
+ 
+    // Sign out logic 
     const handleSignOut = async () => {
         await supabase.auth.signOut();
         router.push('/login');
