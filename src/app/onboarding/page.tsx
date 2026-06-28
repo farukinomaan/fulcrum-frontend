@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
+import { User as SupabaseUser } from '@supabase/supabase-js';
 import Image from 'next/image';
 import {
     ChevronRight, Building2, User, Phone,
@@ -48,7 +49,6 @@ const STEPS = [
     { id: 2, label: 'Connect Tools', sublabel: 'Accounting & payments' },
 ];
 
-
 // SERVICE CARD
 function ServiceCard({
     opt,
@@ -76,13 +76,11 @@ function ServiceCard({
                 ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}
             `}
         >
-            {/* Logo - Added a white background block when selected */}
             <div className={`flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-md transition-colors ${isSelected ? "bg-white shadow-sm" : ""}`}>
                 {opt.logo ? (
                     <img
                         src={opt.logo}
                         alt={`${opt.name} logo`}
-                        // Removed the invert hack, slightly adjusted sizing for padding
                         className="w-6 h-6 object-contain"
                         onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                     />
@@ -91,7 +89,6 @@ function ServiceCard({
                 )}
             </div>
 
-            {/* Text */}
             <div className="flex-1 min-w-0">
                 <p className={`font-medium text-sm leading-tight ${isSelected ? 'text-white' : 'text-neutral-900'}`}>
                     {opt.name}
@@ -101,7 +98,6 @@ function ServiceCard({
                 </p>
             </div>
 
-            {/* State Icon */}
             <div className="flex-shrink-0">
                 {isLoading ? (
                     <Loader2 className="w-4 h-4 text-neutral-400 animate-spin" />
@@ -194,7 +190,7 @@ function OnboardingContent() {
 
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState<string | null>(null);
-    const [user, setUser] = useState<any>(null);
+    const [user, setUser] = useState<SupabaseUser | null>(null);
 
     const [formData, setFormData] = useState({
         full_name: '',
@@ -215,22 +211,24 @@ function OnboardingContent() {
         channels: [],
     });
 
-    // Run ONCE on mount — read searchParams directly, don't add as dep to avoid re-run loop
     useEffect(() => {
         const loadState = async () => {
-            // CHANGED: Fetch from the new dynamic view
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+            setUser(user);
+
             const { data: settings } = await supabase
                 .from('user_integrations_status')
                 .select('*')
                 .eq('user_id', user.id)
                 .single();
 
-            // Read URL params here (snapshot at mount)
             const urlStatus = searchParams.get('status');
             const urlProvider = searchParams.get('provider');
 
             let newAccounting: string | null = null;
             let newBanking: string | null = null;
+            let targetStep = 1;
 
             if (settings) {
                 setFormData(prev => ({
@@ -241,43 +239,45 @@ function OnboardingContent() {
                     currency: settings.currency || 'USD',
                 }));
 
-                if (settings.business_name) setStep(2);
+                // Default rule: If business name exists, go to step 2
+                if (settings.business_name) targetStep = 2;
 
                 newAccounting = settings.accounting_provider;
                 newBanking = settings.banking_provider;
 
-                // CHANGED: Ghost-connection guards using dynamic view booleans
+                // Ghost Guards based on SQL View
                 if (newAccounting === 'Zoho Books' && !settings.zoho_is_active) newAccounting = 'None';
                 if (newAccounting === 'QuickBooks' && !settings.quickbooks_is_active) newAccounting = 'None';
                 if (newAccounting === 'Xero' && !settings.xero_is_active) newAccounting = 'None';
                 if (newBanking === 'Stripe' && !settings.stripe_is_active) newBanking = 'None';
             }
 
-            // ── URL overrides (returning from OAuth) ──
+            // URL Status overrides everything
             if (urlStatus === 'connected') {
                 let resolvedProvider = urlProvider ? decodeURIComponent(urlProvider) : 'Connected Service';
                 if (resolvedProvider.toLowerCase().replace(/\s+/g, '') === 'zohobooks') {
                     resolvedProvider = 'Zoho Books';
                 }
                 newAccounting = resolvedProvider;
-                setStep(2);
+                targetStep = 2; // FORCE STEP 2 AFTER REDIRECT
 
                 await supabase.from('settings').upsert({
                     user_id: user.id,
                     accounting_provider: resolvedProvider,
-                    // REMOVED zoho_connected
                 }, { onConflict: 'user_id' });
 
             } else if (urlStatus === 'connected_stripe') {
                 newBanking = 'Stripe';
-                setStep(2);
+                targetStep = 2; // FORCE STEP 2 AFTER REDIRECT
 
                 await supabase.from('settings').upsert({
                     user_id: user.id,
                     banking_provider: 'Stripe',
-                    // REMOVED stripe_connected
                 }, { onConflict: 'user_id' });
             }
+
+            // Apply step resolution
+            setStep(targetStep);
 
             // Sanitise stale text values
             if (newAccounting === 'Not Connected') newAccounting = 'None';
@@ -290,28 +290,23 @@ function OnboardingContent() {
                 channels: settings?.channels || prev.channels
             }));
 
-            // Clear URL params after reading them
-            if (urlStatus) {
-                router.replace('/onboarding');
-            }
+            // Clear params from URL
+            if (urlStatus) router.replace('/onboarding');
         };
 
         loadState();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []); // ← intentionally empty: we capture searchParams as a snapshot above
+    }, [router, searchParams, supabase]);
 
     // --- ACTIONS ---
 
     const handleSaveDetails = async () => {
+        if (!user) return;
         if (!formData.full_name || !formData.phone_number || !formData.company_name || !formData.currency) {
             alert("Please fill in all required fields.");
             return;
         }
 
         setLoading('saving');
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
         const { error } = await supabase.from('settings').upsert({
             user_id: user.id,
             full_name: formData.full_name,
@@ -328,8 +323,7 @@ function OnboardingContent() {
     };
 
     const handleConnectOAuth = async (provider: string, type: 'accounting' | 'banking') => {
-        if (!provider) return;
-
+        if (!user) return alert("Please log in first.");
         if (provider === 'None') {
             setSelectedServices(prev => ({ ...prev, [type]: 'None' }));
             return;
@@ -337,9 +331,6 @@ function OnboardingContent() {
 
         setLoading(provider);
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return alert("Please log in first.");
-
             let slug = provider.toLowerCase().replace(/\s+/g, '');
             if (slug === 'zohobooks') slug = 'zoho';
 
@@ -350,19 +341,17 @@ function OnboardingContent() {
             window.location.href = data.url;
         } catch (e) {
             console.error(e);
-            alert(`${provider} integration is coming soon. Please select 'None' or a supported provider.`);
+            alert(`${provider} integration is coming soon.`);
             setLoading(null);
         }
     };
 
     const completeOnboarding = async () => {
+        if (!user) return;
         if (!selectedServices.accounting) {
             alert("Please select an accounting option to continue.");
             return;
         }
-
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
 
         await supabase.from('settings').upsert({
             user_id: user.id,
@@ -370,33 +359,25 @@ function OnboardingContent() {
             onboarding_completed: true,
             accounting_provider: selectedServices.accounting,
             banking_provider: selectedServices.banking,
-            // REMOVED manual boolean updates here
         }, { onConflict: 'user_id' });
 
         router.push('/');
     };
 
     // RENDER
-    // Refactor the code later 
     return (
         <div className="min-h-screen bg-neutral-50 flex flex-col">
-
-            {/* ── Top Nav ── */}
             <header className="bg-white border-b border-neutral-100 px-6 py-4 flex items-center justify-between z-10">
                 <div className="flex items-center gap-2.5">
                     <Image src="/logo.png" alt="Fulcrum" width={26} height={26} className="w-6 h-6" />
                     <span className="text-base font-semibold text-neutral-900 tracking-tight">Fulcrum</span>
                 </div>
-                {/* Mobile step pill */}
                 <span className="sm:hidden text-xs font-medium text-neutral-500 bg-neutral-100 px-3 py-1.5 rounded-full">
                     Step {step} of {STEPS.length}
                 </span>
             </header>
 
-            {/* ── Body ── */}
             <div className="flex flex-1">
-
-                {/* ── Left Sidebar (desktop) ── */}
                 <aside className="hidden sm:flex flex-col w-60 xl:w-68 bg-white border-r border-neutral-100 px-8 py-10 flex-shrink-0">
                     <div className="mb-8">
                         <p className="text-[11px] font-semibold uppercase tracking-widest text-neutral-400 mb-1.5">
@@ -416,11 +397,9 @@ function OnboardingContent() {
                     </div>
                 </aside>
 
-                {/* ── Main Panel ── */}
                 <main className="flex-1 overflow-y-auto">
                     <div className="max-w-lg mx-auto px-5 sm:px-10 py-10">
 
-                        {/* ══ STEP 1 ══ */}
                         {step === 1 && (
                             <div className="animate-in fade-in slide-in-from-bottom-3 duration-400">
                                 <div className="mb-8">
@@ -519,7 +498,6 @@ function OnboardingContent() {
                             </div>
                         )}
 
-                        {/* ══ STEP 2 ══ */}
                         {step === 2 && (
                             <div className="animate-in fade-in slide-in-from-bottom-3 duration-400 space-y-8">
                                 <div>
@@ -531,7 +509,6 @@ function OnboardingContent() {
                                     </p>
                                 </div>
 
-                                {/* Accounting Section */}
                                 <section>
                                     <div className="flex items-center justify-between mb-1">
                                         <div className="flex items-center gap-2">
@@ -559,7 +536,6 @@ function OnboardingContent() {
                                     </div>
                                 </section>
 
-                                {/* Banking Section */}
                                 <section>
                                     <div className="flex items-center justify-between mb-1">
                                         <div className="flex items-center gap-2">
@@ -587,7 +563,6 @@ function OnboardingContent() {
                                     </div>
                                 </section>
 
-                                {/* Footer CTA */}
                                 <div className="pt-4 border-t border-neutral-100 flex items-center gap-3">
                                     <button
                                         onClick={() => setStep(1)}
