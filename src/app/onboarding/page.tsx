@@ -22,7 +22,7 @@ interface ServiceItem {
 const accountingOptions: ServiceItem[] = [
     { id: 'zoho', name: 'Zoho Books', description: 'Two-way sync', logo: 'https://www.google.com/s2/favicons?domain=zoho.com&sz=128' },
     { id: 'xero', name: 'Xero', description: 'Two-way sync', logo: 'https://www.google.com/s2/favicons?domain=xero.com&sz=128' },
-    { id: 'quickbooks', name: 'QuickBooks', description: 'Coming soon', badge: 'Soon', logo: 'https://www.google.com/s2/favicons?domain=quickbooks.intuit.com&sz=128' },
+    { id: 'quickbooks', name: 'QuickBooks', description: 'Two-way sync', logo: 'https://www.google.com/s2/favicons?domain=quickbooks.intuit.com&sz=128' },
     { id: 'none', name: 'None', description: 'Manual / Spreadsheet', logo: null }
 ];
 
@@ -194,6 +194,7 @@ function OnboardingContent() {
 
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState<string | null>(null);
+    const [user, setUser] = useState<any>(null);
 
     const [formData, setFormData] = useState({
         full_name: '',
@@ -217,11 +218,9 @@ function OnboardingContent() {
     // Run ONCE on mount — read searchParams directly, don't add as dep to avoid re-run loop
     useEffect(() => {
         const loadState = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
-
+            // CHANGED: Fetch from the new dynamic view
             const { data: settings } = await supabase
-                .from('settings')
+                .from('user_integrations_status')
                 .select('*')
                 .eq('user_id', user.id)
                 .single();
@@ -247,13 +246,11 @@ function OnboardingContent() {
                 newAccounting = settings.accounting_provider;
                 newBanking = settings.banking_provider;
 
-                // Ghost-connection guard — only filter when DB explicitly says false
-                if (newAccounting === 'Zoho Books' && settings.zoho_connected === false) {
-                    newAccounting = 'None';
-                }
-                if (newBanking === 'Stripe' && settings.stripe_connected === false) {
-                    newBanking = 'None';
-                }
+                // CHANGED: Ghost-connection guards using dynamic view booleans
+                if (newAccounting === 'Zoho Books' && !settings.zoho_is_active) newAccounting = 'None';
+                if (newAccounting === 'QuickBooks' && !settings.quickbooks_is_active) newAccounting = 'None';
+                if (newAccounting === 'Xero' && !settings.xero_is_active) newAccounting = 'None';
+                if (newBanking === 'Stripe' && !settings.stripe_is_active) newBanking = 'None';
             }
 
             // ── URL overrides (returning from OAuth) ──
@@ -265,22 +262,20 @@ function OnboardingContent() {
                 newAccounting = resolvedProvider;
                 setStep(2);
 
-                // FIX: Persist immediately so next DB read reflects the connection
                 await supabase.from('settings').upsert({
                     user_id: user.id,
                     accounting_provider: resolvedProvider,
-                    zoho_connected: resolvedProvider === 'Zoho Books',
+                    // REMOVED zoho_connected
                 }, { onConflict: 'user_id' });
 
             } else if (urlStatus === 'connected_stripe') {
                 newBanking = 'Stripe';
                 setStep(2);
 
-                // FIX: Persist Stripe immediately
                 await supabase.from('settings').upsert({
                     user_id: user.id,
                     banking_provider: 'Stripe',
-                    stripe_connected: true,
+                    // REMOVED stripe_connected
                 }, { onConflict: 'user_id' });
             }
 
@@ -369,17 +364,13 @@ function OnboardingContent() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        const isZoho = selectedServices.accounting.toLowerCase().includes('zoho');
-        const isStripe = selectedServices.banking?.toLowerCase().includes('stripe') || false;
-
         await supabase.from('settings').upsert({
             user_id: user.id,
             channels: selectedServices.channels,
             onboarding_completed: true,
             accounting_provider: selectedServices.accounting,
             banking_provider: selectedServices.banking,
-            zoho_connected: isZoho,
-            stripe_connected: isStripe
+            // REMOVED manual boolean updates here
         }, { onConflict: 'user_id' });
 
         router.push('/');
