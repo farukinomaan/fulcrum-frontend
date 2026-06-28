@@ -29,7 +29,7 @@ interface Integration {
 const ACCOUNTING: Integration[] = [
   { id: 'zoho',        name: 'Zoho Books', description: 'Two-way sync of invoices & expenses', logo: 'https://www.google.com/s2/favicons?domain=zoho.com&sz=64',              category: 'accounting', available: true  },
   { id: 'xero',        name: 'Xero',       description: 'Two-way sync of invoices & expenses',logo: 'https://www.google.com/s2/favicons?domain=xero.com&sz=64',              category: 'accounting', available: true  },
-  { id: 'quickbooks',  name: 'QuickBooks', description: 'Coming soon',                         logo:'https://www.google.com/s2/favicons?domain=intuit.com&sz=64', category: 'accounting', available: false },
+  { id: 'quickbooks',  name: 'QuickBooks', description: 'Two-way sync of invoices & expenses',                         logo:'https://www.google.com/s2/favicons?domain=intuit.com&sz=64', category: 'accounting', available: true },
 ];
 
 const BANKING: Integration[] = [
@@ -297,8 +297,9 @@ function SettingsContent() {
       if (!user) { router.push('/login'); return; }
       setUser(user);
 
+      // Fetch from the View instead of the raw settings table
       const { data: settings } = await supabase
-        .from('settings')
+        .from('user_integrations_status') 
         .select('*')
         .eq('user_id', user.id)
         .single();
@@ -308,35 +309,42 @@ function SettingsContent() {
 
       let acc = settings?.accounting_provider ?? null;
       let bank = settings?.banking_provider ?? null;
-      let zoho = settings?.zoho_connected ?? false;
-      let stripe = settings?.stripe_connected ?? false;
 
-      // Ghost guard
+      // Read the dynamic booleans calculated by the DB
+      let zoho = settings?.zoho_is_active ?? false;
+      let quickbooks = settings?.quickbooks_is_active ?? false;
+      let xero = settings?.xero_is_active ?? false;
+      let freshbooks = settings?.freshbooks_is_active ?? false;
+      let stripe = settings?.stripe_is_active ?? false;
+
+      // The universal Ghost Guards
       if (acc === 'Zoho Books' && !zoho) acc = null;
+      if (acc === 'QuickBooks' && !quickbooks) acc = null;
+      if (acc === 'Xero' && !xero) acc = null;
+      if (acc === 'FreshBooks' && !freshbooks) acc = null;
       if (bank === 'Stripe' && !stripe) bank = null;
-      if (acc === 'Not Connected' || acc === 'None') acc = null;
-      if (bank === 'Not Connected' || bank === 'None') bank = null;
 
       // OAuth callback handling
       if (urlStatus === 'connected' && urlProvider) {
         let resolved = decodeURIComponent(urlProvider);
         if (resolved.toLowerCase().replace(/\s+/g, '') === 'zohobooks') resolved = 'Zoho Books';
         acc = resolved;
-        zoho = resolved === 'Zoho Books';
+        
+        // Just update the string, let the SQL view handle the true/false logic
         await supabase.from('settings').upsert({
           user_id: user.id,
           accounting_provider: resolved,
-          zoho_connected: zoho,
         }, { onConflict: 'user_id' });
+        
         showToast(`${resolved} connected successfully`, 'success');
       } else if (urlStatus === 'connected_stripe') {
         bank = 'Stripe';
-        stripe = true;
+        
         await supabase.from('settings').upsert({
           user_id: user.id,
           banking_provider: 'Stripe',
-          stripe_connected: true,
         }, { onConflict: 'user_id' });
+        
         showToast('Stripe connected successfully', 'success');
       }
 
@@ -401,21 +409,28 @@ function SettingsContent() {
   const handleDisconnect = async (integration: Integration) => {
     const isAccounting = integration.category === 'accounting';
     const updates: any = { user_id: user.id };
+
     if (isAccounting) {
       updates.accounting_provider = null;
-      updates.zoho_connected = false;
+      // Destroy the token to ensure the dynamic view returns 'false'
+      if (integration.id === 'zoho') await supabase.from('zoho_tokens').delete().eq('user_id', user.id);
+      if (integration.id === 'quickbooks') await supabase.from('quickbooks_tokens').delete().eq('user_id', user.id);
+      if (integration.id === 'xero') await supabase.from('xero_tokens').delete().eq('user_id', user.id);
+      if (integration.id === 'freshbooks') await supabase.from('freshbooks_tokens').delete().eq('user_id', user.id);
     } else {
       updates.banking_provider = null;
-      updates.stripe_connected = false;
+      if (integration.id === 'stripe') await supabase.from('integrations').delete().match({ user_id: user.id, provider: 'Stripe' });
     }
+
+    // Clear the active provider name from settings
     await supabase.from('settings').upsert(updates, { onConflict: 'user_id' });
+    
     setConnectedProviders(prev => ({
       ...prev,
       accounting: isAccounting ? null : prev.accounting,
       banking: !isAccounting ? null : prev.banking,
-      zoho_connected: isAccounting ? false : prev.zoho_connected,
-      stripe_connected: !isAccounting ? false : prev.stripe_connected,
     }));
+    
     showToast(`${integration.name} disconnected`, 'success');
   };
 
