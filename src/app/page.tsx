@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Image from 'next/image'; 
+import Image from 'next/image';
 import {
   Send, Bell, CheckCircle2, AlertCircle, Clock,
   TrendingUp, MessageSquare, Activity as ActivityIcon,
@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { api } from '@/lib/api'; 
+import { api } from '@/lib/api';
 
 // --- TYPES ---
 interface Invoice {
@@ -44,20 +44,14 @@ interface AIAction {
   timestamp?: string;
 }
 
-// Production-grade agentic fallbacks if live database table is empty
-const SEED_FALLBACK: AIAction[] = [
-  { id: 'action_1', title: 'Match Found', description: 'Found a matching invoice in QuickBooks for the USD 2,500 Stripe payout.', category: 'banking', priority: 'high', metadata: { action_type: 'reconcile' }, timestamp: 'Just now' },
-  { id: 'action_2', title: 'Overdue Invoice', description: 'Invoice #FAL-042 for Acme Corp (SAR 12,000) is 5 days overdue.', category: 'accounting', priority: 'high', metadata: { action_type: 'invoice_chase' }, timestamp: '10m ago' },
-  { id: 'action_3', title: 'Runway Anomaly', description: 'Your infrastructure spend jumped 22% this month due to AWS data transfer fees.', category: 'runway', priority: 'medium', metadata: { action_type: 'review_spend' }, timestamp: '1h ago' }
-];
 
 export default function Home() {
   const router = useRouter();
-  const searchParams = useSearchParams(); 
-  
+  const searchParams = useSearchParams();
+
   const initialView = searchParams.get('view') === 'transactions' ? 'transactions' : 'feed';
   const [activeView, setActiveView] = useState<'feed' | 'transactions'>(initialView);
-  
+
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   // Real Data State
@@ -73,8 +67,8 @@ export default function Home() {
     revenue: 0,
     currency: '',
     providers: {
-        accounting: 'Accounting', 
-        banking: 'Bank'
+      accounting: 'Accounting',
+      banking: 'Bank'
     }
   });
 
@@ -101,13 +95,11 @@ export default function Home() {
       .order('created_at', { ascending: false })
       .limit(20);
 
-    if (data && data.length > 0) {
+    if (data) {
       setActions(data.map((item: any) => ({
         ...item,
         timestamp: new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       })));
-    } else {
-      setActions(SEED_FALLBACK);
     }
 
     // B. Fetch Dashboard Stats
@@ -134,10 +126,10 @@ export default function Home() {
     fetchDashboardData();
 
     const setupRealtime = async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if(!user) return;
-        
-        channel = supabase
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      channel = supabase
         .channel(`ai-actions-feed-${user.id}`)
         .on(
           'postgres_changes',
@@ -151,11 +143,10 @@ export default function Home() {
             const newItem = payload.new as any;
             if (newItem.status === 'pending') {
               setActions((prev) => {
-                const filtered = prev.filter(a => !a.id.startsWith('action_')); // Evict seeds on dynamic intercept
                 return [{
                   ...newItem,
                   timestamp: 'Just now'
-                }, ...filtered];
+                }, ...prev];
               });
             }
           }
@@ -167,7 +158,7 @@ export default function Home() {
     return () => {
       if (channel) supabase.removeChannel(channel);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // FETCH TRANSACTIONS (On Tab Switch)
@@ -175,7 +166,7 @@ export default function Home() {
     if (activeView === 'transactions') {
       loadRealData();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeView]);
 
   const loadRealData = async () => {
@@ -184,28 +175,28 @@ export default function Home() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const [invRes, txnRes] = await Promise.all([
-             fetch(`${API_URL}/invoices?user_id=${user.id}`).catch(err => null),
-             fetch(`${API_URL}/transactions?user_id=${user.id}`).catch(err => null)
+          fetch(`${API_URL}/invoices?user_id=${user.id}`).catch(err => null),
+          fetch(`${API_URL}/transactions?user_id=${user.id}`).catch(err => null)
         ]);
 
         if (invRes && invRes.ok) {
-            const invData = await invRes.json();
-            setInvoices(Array.isArray(invData) ? invData : []);
+          const invData = await invRes.json();
+          setInvoices(Array.isArray(invData) ? invData : []);
         } else {
-            setInvoices([]);
+          setInvoices([]);
         }
 
         if (txnRes && txnRes.ok) {
-            const txnData = await txnRes.json();
-            if (txnData && txnData.transactions) {
-                setTransactions(txnData.transactions);
-            } else if (Array.isArray(txnData)) {
-                setTransactions(txnData);
-            } else {
-                setTransactions([]);
-            }
-        } else {
+          const txnData = await txnRes.json();
+          if (txnData && txnData.transactions) {
+            setTransactions(txnData.transactions);
+          } else if (Array.isArray(txnData)) {
+            setTransactions(txnData);
+          } else {
             setTransactions([]);
+          }
+        } else {
+          setTransactions([]);
         }
       }
     } catch (error) {
@@ -225,15 +216,15 @@ export default function Home() {
       const res = await fetch(`${API_URL}/dashboard/sync?user_id=${user.id}`, {
         method: 'POST'
       });
-      
+
       const result = await res.json();
-      if(result.status === 'error') {
-          alert("Sync Failed: " + result.message);
+      if (result.status === 'error') {
+        alert("Sync Failed: " + result.message);
       } else {
-          await fetchDashboardData(); 
-          if (activeView === 'transactions') {
-              await loadRealData();
-          }
+        await fetchDashboardData();
+        if (activeView === 'transactions') {
+          await loadRealData();
+        }
       }
     } catch (e) {
       console.error(e);
@@ -248,29 +239,26 @@ export default function Home() {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       try {
-          const result = await api.runReconciliation(user.id);
-          setReconResult(result);
-          await loadRealData();
+        const result = await api.runReconciliation(user.id);
+        setReconResult(result);
+        await loadRealData();
       } catch (e) {
-          console.error("Reconciliation failed", e);
+        console.error("Reconciliation failed", e);
       } finally {
-          setReconLoading(false);
-          setTimeout(() => setReconResult(null), 5000);
+        setReconLoading(false);
+        setTimeout(() => setReconResult(null), 5000);
       }
     }
   };
 
   const handleInboxAction = async (id: string, nextStatus: 'completed' | 'dismissed') => {
     setProcessingId(id);
-    
-    // Mutate backend state if it is a real database UUID record
-    if (!id.startsWith('action_')) {
-      await supabase
-        .from('ai_actions')
-        .update({ status: nextStatus })
-        .eq('id', id);
-    }
 
+    await supabase
+      .from('ai_actions')
+      .update({ status: nextStatus })
+      .eq('id', id);
+      
     setActions(prev => prev.filter(item => item.id !== id));
     setProcessingId(null);
   };
@@ -288,8 +276,8 @@ export default function Home() {
 
   const formatMoney = (amount: number) => {
     return Number(amount).toLocaleString('en-US', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
     });
   };
 
@@ -350,9 +338,9 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-4 relative">
             <button className="p-2 text-slate-400 hover:text-slate-600 transition-colors relative"><Bell className="w-5 h-5" /></button>
-            
+
             <div className="relative">
-              <button 
+              <button
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
                 className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center font-bold text-xs hover:ring-2 hover:ring-gray-200 transition-all focus:outline-none"
               >
@@ -361,15 +349,15 @@ export default function Home() {
 
               {isProfileOpen && (
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 py-1 z-50 animate-in fade-in zoom-in-95 duration-200">
-                   <div className="px-4 py-3 border-b border-slate-100">
-                      <p className="text-sm font-medium text-slate-900">My Account</p>
-                   </div>
-                   <button onClick={() => router.push('/settings')} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors">
-                      <Settings className="w-4 h-4" /> Settings
-                   </button>
-                   <button onClick={handleSignOut} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors">
-                      <LogOut className="w-4 h-4" /> Sign Out
-                   </button>
+                  <div className="px-4 py-3 border-b border-slate-100">
+                    <p className="text-sm font-medium text-slate-900">My Account</p>
+                  </div>
+                  <button onClick={() => router.push('/settings')} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors">
+                    <Settings className="w-4 h-4" /> Settings
+                  </button>
+                  <button onClick={handleSignOut} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors">
+                    <LogOut className="w-4 h-4" /> Sign Out
+                  </button>
                 </div>
               )}
             </div>
@@ -429,11 +417,10 @@ export default function Home() {
                   ) : (
                     actions.map((action) => (
                       <div key={action.id} className="p-5 flex items-start gap-4 hover:bg-slate-50/50 transition-all group animate-in fade-in duration-200">
-                        <div className={`mt-0.5 p-2 rounded-lg border flex-shrink-0 ${
-                          action.priority === 'high' 
-                            ? 'bg-red-50 border-red-100 text-red-600' 
+                        <div className={`mt-0.5 p-2 rounded-lg border flex-shrink-0 ${action.priority === 'high'
+                            ? 'bg-red-50 border-red-100 text-red-600'
                             : 'bg-slate-50 border-slate-200 text-slate-600'
-                        }`}>
+                          }`}>
                           <AlertCircle className="w-4 h-4" />
                         </div>
 
@@ -455,7 +442,7 @@ export default function Home() {
                         {/* Inline Interaction Triggers */}
                         <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-150 shrink-0 self-center">
                           {action.metadata?.action_type === 'reconcile' && (
-                            <button 
+                            <button
                               disabled={!!processingId}
                               onClick={() => handleInboxAction(action.id, 'completed')}
                               className="px-3 py-1.5 bg-black text-white text-xs font-medium rounded-lg hover:bg-slate-800 transition-all shadow-sm"
@@ -465,7 +452,7 @@ export default function Home() {
                           )}
 
                           {action.metadata?.action_type === 'invoice_chase' && (
-                            <button 
+                            <button
                               disabled={!!processingId}
                               onClick={() => handleInboxAction(action.id, 'completed')}
                               className="px-3 py-1.5 bg-black text-white text-xs font-medium rounded-lg hover:bg-slate-800 transition-all shadow-sm"
@@ -475,7 +462,7 @@ export default function Home() {
                           )}
 
                           {action.metadata?.action_type === 'review_spend' && (
-                            <button 
+                            <button
                               disabled={!!processingId}
                               onClick={() => handleInboxAction(action.id, 'completed')}
                               className="px-3 py-1.5 border border-slate-200 bg-white text-slate-700 text-xs font-medium rounded-lg hover:bg-slate-50 transition-all shadow-sm"
@@ -523,20 +510,20 @@ export default function Home() {
               ) : (
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-                    <DataMetric 
-                        label="Total Revenue" 
-                        value={`${stats.currency} ${formatMoney(invoices.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.total_amount), 0))}`} 
-                        icon={<TrendingUp className="text-green-600" />} 
+                    <DataMetric
+                      label="Total Revenue"
+                      value={`${stats.currency} ${formatMoney(invoices.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.total_amount), 0))}`}
+                      icon={<TrendingUp className="text-green-600" />}
                     />
-                    <DataMetric 
-                        label="Outstanding" 
-                        value={`${stats.currency} ${formatMoney(invoices.filter(i => i.status !== 'paid').reduce((s, i) => s + Number(i.total_amount), 0))}`} 
-                        icon={<Clock className="text-amber-600" />} 
+                    <DataMetric
+                      label="Outstanding"
+                      value={`${stats.currency} ${formatMoney(invoices.filter(i => i.status !== 'paid').reduce((s, i) => s + Number(i.total_amount), 0))}`}
+                      icon={<Clock className="text-amber-600" />}
                     />
-                    <DataMetric 
-                        label="Matched" 
-                        value={`${transactions.filter(t => t.reconciliation_status === 'matched').length}/${transactions.length}`} 
-                        icon={<DollarSign className="text-blue-600" />} 
+                    <DataMetric
+                      label="Matched"
+                      value={`${transactions.filter(t => t.reconciliation_status === 'matched').length}/${transactions.length}`}
+                      icon={<DollarSign className="text-blue-600" />}
                     />
                   </div>
 
