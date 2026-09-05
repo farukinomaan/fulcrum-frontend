@@ -88,7 +88,7 @@ export default function ReportsPage() {
                     setSavedReports(reports);
                 }
             } catch (err) {
-                // Endpoint might be empty or table newly created
+                // Ignore if endpoint is empty
             }
         };
         fetchSettingsAndReports();
@@ -128,10 +128,10 @@ export default function ReportsPage() {
 
             setReportData({
                 month: `${period.month_name} ${period.year}`,
-                revenue: pnl.revenue,
-                expenses: pnl.expenses,
-                net_income: pnl.net_income,
-                profit_margin_pct: pnl.profit_margin_pct || 0,
+                revenue: pnl.revenue ?? 0,
+                expenses: pnl.expenses ?? 0,
+                net_income: pnl.net_income ?? 0,
+                profit_margin_pct: pnl.profit_margin_pct ?? 0,
                 currency: currency,
                 expense_breakdown: pnl.expense_breakdown || {},
                 mom: data.mom ? {
@@ -144,8 +144,8 @@ export default function ReportsPage() {
                 ai_insights: {
                     headline: `${period.month_name} Overview`,
                     summary: data.executive_summary || "Financial performance generated successfully.",
-                    action_item: pnl.net_income >= 0
-                        ? `Operating at a healthy ${(pnl.profit_margin_pct || 0).toFixed(1)}% profit margin.`
+                    action_item: (pnl.net_income ?? 0) >= 0
+                        ? `Operating at a healthy ${(pnl.profit_margin_pct ?? 0).toFixed(1)}% profit margin.`
                         : "Expenses exceed revenue for this period. Review operating cost drivers."
                 }
             });
@@ -196,7 +196,6 @@ export default function ReportsPage() {
             setDownloadingPdf(false);
         }
     };
-
 
     const formatMoney = (amount: number) => {
         return (amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -322,7 +321,7 @@ export default function ReportsPage() {
                             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
                                 <div>
                                     <h3 className="font-semibold text-slate-800">Profit & Loss Statement</h3>
-                                    <p className="text-xs text-slate-400">Operating margin: {reportData.profit_margin_pct.toFixed(1)}%</p>
+                                    <p className="text-xs text-slate-400">Operating margin: {(reportData.profit_margin_pct ?? 0).toFixed(1)}%</p>
                                 </div>
                                 <span className="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-medium">
                                     {reportData.month}
@@ -348,7 +347,7 @@ export default function ReportsPage() {
                                                         <div className="flex justify-between text-sm">
                                                             <span className="text-slate-600 capitalize">{cat.replace(/_/g, " ")}</span>
                                                             <span className="font-medium text-slate-800">
-                                                                -{reportData.currency} {formatMoney(amt)} <span className="text-xs text-slate-400 font-normal">({pct.toFixed(0)}%)</span>
+                                                                -{reportData.currency} {formatMoney(amt)} <span className="text-xs text-slate-400 font-normal">({(pct ?? 0).toFixed(0)}%)</span>
                                                             </span>
                                                         </div>
                                                         <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
@@ -398,7 +397,7 @@ export default function ReportsPage() {
                                 </div>
 
                                 <p className="text-xs text-slate-500 mb-4">
-                                    Top client accounts for <span className="font-semibold text-slate-700">{reportData.revenue_concentration.top_customer_pct.toFixed(1)}%</span> of monthly billing.
+                                    Top client accounts for <span className="font-semibold text-slate-700">{(reportData.revenue_concentration?.top_customer_pct ?? 0).toFixed(1)}%</span> of monthly billing.
                                 </p>
 
                                 <div className="space-y-2">
@@ -406,7 +405,7 @@ export default function ReportsPage() {
                                         <div key={c.customer_name} className="flex justify-between items-center text-sm py-1.5 border-b border-slate-100 last:border-0">
                                             <span className="text-slate-700 font-medium">{c.customer_name}</span>
                                             <span className="text-slate-500 font-mono text-xs">
-                                                {reportData.currency} {formatMoney(c.total_revenue)} ({c.percentage_of_total.toFixed(1)}%)
+                                                {reportData.currency} {formatMoney(c.total_revenue)} ({((c.percentage_of_total ?? 0)).toFixed(1)}%)
                                             </span>
                                         </div>
                                     ))}
@@ -505,8 +504,8 @@ function ExpenseRow({ label, amount, currency }: { label: string, amount: number
     );
 }
 
-function MoMBadge({ pct, isExpense = false }: { pct: number | null, isExpense?: boolean }) {
-    if (pct === null || pct === undefined) return null;
+function MoMBadge({ pct, isExpense = false }: { pct: number | null | undefined, isExpense?: boolean }) {
+    if (pct === null || pct === undefined || isNaN(pct)) return null;
     const isGood = isExpense ? pct <= 0 : pct >= 0;
     const isPositive = pct >= 0;
 

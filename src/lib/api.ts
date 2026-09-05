@@ -133,9 +133,13 @@ export async function fetchCashFlow(
 }
 // 5. Fetch Versioned / Saved Reports List
 export async function fetchSavedReports(): Promise<SavedReportMeta[]> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/reports/saved`, {
-    cache: "no-store",
-  });
-  if (!res.ok) throw new Error("Failed to fetch saved reports");
-  return res.json();
+  try {
+    const res = await fetch(`${API_BASE_URL}/reports/saved`, {
+      cache: "no-store",
+    });
+    if (!res.ok) return [];
+    return res.json();
+  } catch (e) {
+    return [];
+  }
 }
