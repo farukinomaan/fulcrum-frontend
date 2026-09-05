@@ -123,30 +123,27 @@ export default function ReportsPage() {
             const data: MonthlyReportResponse = await response.json();
 
             // Extract from structured PnL model
-            const pnl = data.pnl || { revenue: 0, expenses: 0, net_income: 0, profit_margin_pct: 0, expense_breakdown: {} };
-            const period = data.period || { month_name: `Month ${selectedMonth}`, year: selectedYear };
+            const pnl = data.pnl || { revenue: 0, expenses: 0, net_income: 0, margin_pct: 0, expense_breakdown: {} };
 
             setReportData({
-                month: `${period.month_name} ${period.year}`,
+                month: data.month || `${selectedMonth}/${selectedYear}`,
                 revenue: pnl.revenue ?? 0,
                 expenses: pnl.expenses ?? 0,
                 net_income: pnl.net_income ?? 0,
-                profit_margin_pct: pnl.profit_margin_pct ?? 0,
-                currency: currency,
+                profit_margin_pct: pnl.margin_pct ?? 0,
+                currency: data.currency || currency,
                 expense_breakdown: pnl.expense_breakdown || {},
                 mom: data.mom ? {
-                    prev_month_str: data.mom.prev_month_str,
+                    prev_month_str: data.mom.prev_month_label,
                     revenue_change_pct: data.mom.revenue_change_pct,
                     expense_change_pct: data.mom.expense_change_pct,
                     net_income_change_pct: data.mom.net_income_change_pct,
                 } : null,
                 revenue_concentration: data.revenue_concentration || null,
                 ai_insights: {
-                    headline: `${period.month_name} Overview`,
-                    summary: data.executive_summary || "Financial performance generated successfully.",
-                    action_item: (pnl.net_income ?? 0) >= 0
-                        ? `Operating at a healthy ${(pnl.profit_margin_pct ?? 0).toFixed(1)}% profit margin.`
-                        : "Expenses exceed revenue for this period. Review operating cost drivers."
+                    headline: data.ai_insights?.headline || `${data.month} Overview`,
+                    summary: data.ai_insights?.summary || "Financial performance generated successfully.",
+                    action_item: data.ai_insights?.action_item || "Review operating cost drivers."
                 }
             });
 
@@ -386,26 +383,24 @@ export default function ReportsPage() {
                                         <Users className="w-4 h-4 text-slate-600" />
                                         <h3 className="font-semibold text-slate-800 text-sm">Top Revenue Sources</h3>
                                     </div>
-                                    <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium capitalize ${reportData.revenue_concentration.concentration_risk === 'low'
-                                        ? 'bg-emerald-50 text-emerald-700'
-                                        : reportData.revenue_concentration.concentration_risk === 'moderate'
-                                            ? 'bg-amber-50 text-amber-700'
-                                            : 'bg-red-50 text-red-700'
+                                    <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${reportData.revenue_concentration.concentration_risk
+                                            ? 'bg-red-50 text-red-700'
+                                            : 'bg-emerald-50 text-emerald-700'
                                         }`}>
-                                        {reportData.revenue_concentration.concentration_risk} concentration risk
+                                        {reportData.revenue_concentration.concentration_risk ? "High" : "Low"} concentration risk
                                     </span>
                                 </div>
 
                                 <p className="text-xs text-slate-500 mb-4">
-                                    Top client accounts for <span className="font-semibold text-slate-700">{(reportData.revenue_concentration?.top_customer_pct ?? 0).toFixed(1)}%</span> of monthly billing.
+                                    Top client accounts for <span className="font-semibold text-slate-700">{(reportData.revenue_concentration?.top_customer_share_pct ?? 0).toFixed(1)}%</span> of monthly billing.
                                 </p>
 
                                 <div className="space-y-2">
                                     {reportData.revenue_concentration.top_customers.map((c) => (
-                                        <div key={c.customer_name} className="flex justify-between items-center text-sm py-1.5 border-b border-slate-100 last:border-0">
-                                            <span className="text-slate-700 font-medium">{c.customer_name}</span>
+                                        <div key={c.customer_id} className="flex justify-between items-center text-sm py-1.5 border-b border-slate-100 last:border-0">
+                                            <span className="text-slate-700 font-medium">{c.customer_id}</span>
                                             <span className="text-slate-500 font-mono text-xs">
-                                                {reportData.currency} {formatMoney(c.total_revenue)} ({((c.percentage_of_total ?? 0)).toFixed(1)}%)
+                                                {reportData.currency} {formatMoney(c.total_paid)} ({((c.revenue_share_pct ?? 0)).toFixed(1)}%)
                                             </span>
                                         </div>
                                     ))}
