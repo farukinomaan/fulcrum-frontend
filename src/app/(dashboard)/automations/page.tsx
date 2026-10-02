@@ -41,7 +41,6 @@ export default function AutomationsPage() {
     const [running, setRunning] = useState(false);
     const [rules, setRules] = useState<AutomationRule[]>([]);
     const [logs, setLogs] = useState<ExecutionResult[]>([]);
-    const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [sendingIndex, setSendingIndex] = useState<number | null>(null);
     const [connecting, setConnecting] = useState(false);
@@ -211,63 +210,9 @@ export default function AutomationsPage() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 flex font-sans text-slate-900">
-            
-            {/* SIDEBAR */}
-            <div className="w-64 bg-white border-r border-slate-200 hidden md:flex flex-col fixed h-full z-20">
-                <div className="p-6 border-b border-slate-100">
-                    <div className="flex items-center gap-3">
-                        <Image src="/logo.png" alt="Fulcrum" width={32} height={32} className="w-8 h-8" />
-                        <span className="font-semibold text-lg tracking-tight">Fulcrum</span>
-                    </div>
-                </div>
-                <nav className="flex-1 p-4 space-y-1">
-                    <NavItem icon={<LayoutDashboard />} label="Live Feed" onClick={() => router.push('/')} />
-                    <NavItem icon={<CreditCard />} label="Transactions" onClick={() => router.push('/?view=transactions')} />
-                    <NavItem icon={<FileText />} label="Reports" onClick={() => router.push('/reports')} />
-                    <NavItem icon={<Zap />} label="Automations" active onClick={() => {}} />
-                    <NavItem icon={<MessageSquare />} label="Ask Fulcrum" onClick={() => router.push('/chat')} />
-                </nav>
-                <div className="pt-4 mt-4 border-t border-slate-100 p-4">
-                    <NavItem icon={<Settings />} label="Settings" onClick={() => router.push('/settings')} />
-                </div>
-            </div>
-
+        <>
             {/* MAIN CONTENT */}
-            <div className="flex-1 flex flex-col min-h-screen md:pl-64 transition-all">
-                
-                {/* HEADER */}
-                <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 sticky top-0 z-10">
-                    <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-amber-500 animate-pulse"></div>
-                        <span className="text-sm font-medium text-slate-600">Autopilot Mode</span>
-                    </div>
-                    <div className="flex items-center gap-4 relative">
-                        {/* CONNECT GMAIL BUTTON */}
-                        <button 
-                            onClick={handleConnectGmail}
-                            disabled={connecting}
-                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-all"
-                        >
-                            {connecting ? <Loader2 className="w-4 h-4 animate-spin"/> : <Mail className="w-4 h-4" />}
-                            Connect Gmail
-                        </button>
-                        
-                        <button className="p-2 text-slate-400 hover:text-slate-600 transition-colors"><Bell className="w-5 h-5" /></button>
-                        <div className="relative">
-                            <button onClick={() => setIsProfileOpen(!isProfileOpen)} className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center font-bold text-xs">ME</button>
-                            {isProfileOpen && (
-                                <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 py-1 z-50 animate-in fade-in zoom-in-95">
-                                    <div className="px-4 py-3 border-b border-slate-100"><p className="text-sm font-medium text-slate-900">My Account</p></div>
-                                    <button onClick={() => router.push('/settings')} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"><Settings className="w-4 h-4" /> Settings</button>
-                                    <button onClick={handleSignOut} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"><LogOut className="w-4 h-4" /> Sign Out</button>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </header>
-
-                <div className="flex-1 overflow-auto bg-slate-50 p-8">
+                <div className="flex-1 overflow-auto bg-slate-50 p-4 md:p-8">
                     <div className="max-w-7xl mx-auto h-full flex flex-col">
                         
                         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
@@ -278,15 +223,24 @@ export default function AutomationsPage() {
                                 </h1>
                                 <p className="text-slate-500 mt-1">Create rules. Let AI chase your invoices.</p>
                             </div>
-                            
-                            <button 
-                                onClick={handleRunEngine}
-                                disabled={running || rules.length === 0}
-                                className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-white transition-all shadow-lg hover:shadow-xl ${running ? 'bg-slate-400 cursor-not-allowed' : 'bg-black hover:bg-slate-800'}`}
-                            >
-                                {running ? <Loader2 className="w-5 h-5 animate-spin" /> : <Play className="w-5 h-5 fill-current" />}
-                                {running ? 'Running Engine...' : 'Run Automations Now'}
-                            </button>
+                            <div className="flex flex-col sm:flex-row items-center gap-3">
+                                <button 
+                                    onClick={handleConnectGmail}
+                                    disabled={connecting}
+                                    className="flex items-center gap-2 w-full sm:w-auto justify-center px-6 py-3 font-medium text-slate-600 bg-white border border-slate-200 shadow-sm hover:bg-slate-50 rounded-xl transition-all"
+                                >
+                                    {connecting ? <Loader2 className="w-5 h-5 animate-spin"/> : <Mail className="w-5 h-5" />}
+                                    Connect Gmail
+                                </button>
+                                <button 
+                                    onClick={handleRunEngine}
+                                    disabled={running || rules.length === 0}
+                                    className={`flex items-center gap-2 w-full sm:w-auto justify-center px-6 py-3 rounded-xl font-bold text-white transition-all shadow-lg hover:shadow-xl ${running ? 'bg-slate-400 cursor-not-allowed' : 'bg-black hover:bg-slate-800'}`}
+                                >
+                                    {running ? <Loader2 className="w-5 h-5 animate-spin" /> : <Play className="w-5 h-5 fill-current" />}
+                                    {running ? 'Running...' : 'Run Automations Now'}
+                                </button>
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 flex-1 min-h-0">
@@ -400,20 +354,6 @@ export default function AutomationsPage() {
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
+        </>
     );
-}
-
-// --- SUB-COMPONENT: NavItem ---
-function NavItem({ icon, label, active = false, onClick }: { icon: any, label: string, active?: boolean, onClick?: () => void }) {
-  return (
-    <button 
-        onClick={onClick} 
-        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${active ? 'bg-slate-100 text-slate-900 shadow-sm' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
-    >
-        {React.cloneElement(icon, { className: "w-4 h-4" })}
-        {label}
-    </button>
-  );
 }

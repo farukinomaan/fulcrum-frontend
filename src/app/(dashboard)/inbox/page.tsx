@@ -52,7 +52,10 @@ export default function Home() {
   const initialView = searchParams.get('view') === 'transactions' ? 'transactions' : 'feed';
   const [activeView, setActiveView] = useState<'feed' | 'transactions'>(initialView);
 
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  useEffect(() => {
+    setActiveView(searchParams.get('view') === 'transactions' ? 'transactions' : 'feed');
+  }, [searchParams]);
+
 
   // Real Data State
   const [actions, setActions] = useState<AIAction[]>([]);
@@ -263,14 +266,9 @@ export default function Home() {
     setProcessingId(null);
   };
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    router.push('/login');
-  };
-
   const handleViewChange = (view: 'feed' | 'transactions') => {
     setActiveView(view);
-    const newUrl = view === 'transactions' ? '/?view=transactions' : '/';
+    const newUrl = view === 'transactions' ? '/inbox?view=transactions' : '/inbox';
     window.history.pushState({}, '', newUrl);
   };
 
@@ -282,87 +280,8 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex font-sans text-slate-900">
+    <>
 
-      {/* SIDEBAR */}
-      <div className="w-64 bg-white border-r border-slate-200 hidden md:flex flex-col fixed h-full z-20">
-        <div className="p-6 border-b border-slate-100">
-          <div className="flex items-center gap-3">
-            <Image src="/logo.png" alt="Fulcrum Logo" width={32} height={32} className="w-8 h-8" />
-            <span className="font-semibold text-lg tracking-tight">Fulcrum</span>
-          </div>
-        </div>
-
-        <nav className="flex-1 p-4 space-y-1">
-          <NavItem
-            icon={<ActivityIcon />}
-            label="Live Feed"
-            active={activeView === 'feed'}
-            onClick={() => handleViewChange('feed')}
-          />
-          <NavItem
-            icon={<CreditCard />}
-            label="Transactions"
-            active={activeView === 'transactions'}
-            onClick={() => handleViewChange('transactions')}
-          />
-          <NavItem
-            icon={<FileText />}
-            label="Reports"
-            onClick={() => router.push('/reports')}
-          />
-          <NavItem
-            icon={<Zap />}
-            label="Automations"
-            onClick={() => router.push('/automations')}
-          />
-          <NavItem
-            icon={<MessageSquare />}
-            label="Ask Fulcrum"
-            onClick={() => router.push('/chat')}
-          />
-        </nav>
-        <div className="pt-4 mt-4 border-t border-slate-100 p-4">
-          <NavItem icon={<Settings />} label="Settings" onClick={() => router.push('/settings')} />
-        </div>
-      </div>
-
-      {/* MAIN CONTENT */}
-      <div className="flex-1 flex flex-col min-h-screen md:pl-64 transition-all">
-
-        {/* Header */}
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 sticky top-0 z-10">
-          <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
-            <span className="text-sm font-medium text-slate-600">Books are audit-ready</span>
-          </div>
-          <div className="flex items-center gap-4 relative">
-            <button className="p-2 text-slate-400 hover:text-slate-600 transition-colors relative"><Bell className="w-5 h-5" /></button>
-
-            <div className="relative">
-              <button
-                onClick={() => setIsProfileOpen(!isProfileOpen)}
-                className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center font-bold text-xs hover:ring-2 hover:ring-gray-200 transition-all focus:outline-none"
-              >
-                ME
-              </button>
-
-              {isProfileOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 py-1 z-50 animate-in fade-in zoom-in-95 duration-200">
-                  <div className="px-4 py-3 border-b border-slate-100">
-                    <p className="text-sm font-medium text-slate-900">My Account</p>
-                  </div>
-                  <button onClick={() => router.push('/settings')} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors">
-                    <Settings className="w-4 h-4" /> Settings
-                  </button>
-                  <button onClick={handleSignOut} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors">
-                    <LogOut className="w-4 h-4" /> Sign Out
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </header>
 
         <div className="flex-1 overflow-auto bg-slate-50">
 
@@ -588,7 +507,6 @@ export default function Home() {
             </div>
           )}
         </div>
-      </div>
 
       {/* Toast */}
       {reconResult && (
@@ -600,7 +518,7 @@ export default function Home() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 
