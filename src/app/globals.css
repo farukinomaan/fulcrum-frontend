@@ -1,1 +1,49 @@
 @import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --color-white: var(--t-white);
+  --color-slate-50: var(--t-slate-50);
+  --color-slate-100: var(--t-slate-100);
+  --color-slate-200: var(--t-slate-200);
+  --color-slate-300: var(--t-slate-300);
+  --color-slate-400: var(--t-slate-400);
+  --color-slate-500: var(--t-slate-500);
+  --color-slate-600: var(--t-slate-600);
+  --color-slate-700: var(--t-slate-700);
+  --color-slate-800: var(--t-slate-800);
+  --color-slate-900: var(--t-slate-900);
+  --color-slate-950: var(--t-slate-950);
+}
+
+:root {
+  --t-white: #ffffff;
+  --t-slate-50: #f8fafc;
+  --t-slate-100: #f1f5f9;
+  --t-slate-200: #e2e8f0;
+  --t-slate-300: #cbd5e1;
+  --t-slate-400: #94a3b8;
+  --t-slate-500: #64748b;
+  --t-slate-600: #475569;
+  --t-slate-700: #334155;
+  --t-slate-800: #1e293b;
+  --t-slate-900: #0f172a;
+  --t-slate-950: #020617;
+}
+
+.dark {
+  /* Use a pure black and neutral gray scale (zinc/neutral) for dark mode instead of slate's blue tint */
+  --t-white: #121212;       /* White becomes dark gray (card background) */
+  --t-slate-50: #000000;    /* Lightest bg becomes pure black */
+  --t-slate-100: #18181b;   /* zinc-900 for slightly offset backgrounds */
+  --t-slate-200: #27272a;   /* zinc-800 for borders */
+  --t-slate-300: #3f3f46;   /* zinc-700 */
+  --t-slate-400: #52525b;   /* zinc-600 */
+  --t-slate-500: #71717a;   /* zinc-500 (Midpoint) */
+  --t-slate-600: #a1a1aa;   /* zinc-400 */
+  --t-slate-700: #d4d4d8;   /* zinc-300 */
+  --t-slate-800: #e4e4e7;   /* zinc-200 */
+  --t-slate-900: #fafafa;   /* zinc-50 for primary text */
+  --t-slate-950: #ffffff;   /* pure white */
+}

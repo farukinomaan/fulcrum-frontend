@@ -11,11 +11,13 @@ import {
   MessageSquare,
   Settings,
   Moon,
+  Sun,
   LogOut,
   Inbox,
   LayoutDashboard
 } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
+import { useTheme } from 'next-themes';
 
 export interface NavItemType {
   label: string;
@@ -25,10 +27,16 @@ export interface NavItemType {
 
 export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(true); // Default to collapsed like Gemini, or false if preferred
+  const [mounted, setMounted] = useState(false);
   
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { theme, setTheme } = useTheme();
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleToggleCollapse = () => {
     setIsCollapsed(!isCollapsed);
@@ -135,15 +143,20 @@ export default function Sidebar() {
 
           {/* Bottom Actions */}
           <div className="p-3 space-y-2 shrink-0">
-            <button 
-              className={`flex items-center transition-all rounded-full ${
-                isCollapsed ? 'w-full px-4 py-3 gap-4 md:justify-center md:w-12 md:h-12 md:mx-auto md:px-0 md:gap-0' : 'w-full px-4 py-3 gap-4'
-              } text-sm font-medium text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200`}
-              title={isCollapsed ? "Dark Mode" : undefined}
-            >
-              <Moon className="w-5 h-5 shrink-0" />
-              <div className={`overflow-hidden transition-all duration-300 ${isCollapsed ? 'max-w-[200px] opacity-100 md:max-w-0 md:opacity-0' : 'max-w-[200px] opacity-100'}`}><span className="whitespace-nowrap">Dark Mode</span></div>
-            </button>
+            {mounted && (
+              <button 
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                className={`flex items-center transition-all rounded-full ${
+                  isCollapsed ? 'w-full px-4 py-3 gap-4 md:justify-center md:w-12 md:h-12 md:mx-auto md:px-0 md:gap-0' : 'w-full px-4 py-3 gap-4'
+                } text-sm font-medium text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200`}
+                title={isCollapsed ? (theme === 'dark' ? "Light Mode" : "Dark Mode") : undefined}
+              >
+                {theme === 'dark' ? <Sun className="w-5 h-5 shrink-0" /> : <Moon className="w-5 h-5 shrink-0" />}
+                <div className={`overflow-hidden transition-all duration-300 ${isCollapsed ? 'max-w-[200px] opacity-100 md:max-w-0 md:opacity-0' : 'max-w-[200px] opacity-100'}`}>
+                  <span className="whitespace-nowrap">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+                </div>
+              </button>
+            )}
 
             <button 
                onClick={() => {
