@@ -29,25 +29,25 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex bg-white">
+    <div className="min-h-screen flex bg-white transition-colors">
       
       {/* --- LEFT SIDE: Google Login Only (35% Width) --- */}
-      <div className="w-full lg:w-[35%] flex flex-col justify-center px-8 sm:px-12 relative z-10 bg-white">
+      <div className="w-full lg:w-[35%] flex flex-col justify-center px-8 sm:px-12 relative z-10 bg-white transition-colors">
         
         {/* Logo */}
         <div className="absolute top-8 left-8">
           <div className="flex items-center gap-2">
-            <Image src="/logo.png" alt="Fulcrum Logo" width={32} height={32} className="w-8 h-8" />
-            <span className="font-medium text-xl text-neutral-900">Fulcrum</span>
+            <Image src="/logo.png" alt="Fulcrum Logo" width={32} height={32} className="w-8 h-8 dark:invert transition-all" />
+            <span className="font-medium text-xl text-slate-900">Fulcrum</span>
           </div>
         </div>
 
         <div className="max-w-sm w-full mx-auto">
           <div className="mb-12">
-            <h1 className="text-[2.5rem] font-light text-neutral-900 mb-4 leading-tight">
+            <h1 className="text-[2.5rem] font-light text-slate-900 mb-4 leading-tight">
               Welcome back
             </h1>
-            <p className="text-neutral-500 text-base font-light">
+            <p className="text-slate-500 text-base font-light">
               Your books are waiting.
             </p>
           </div>
@@ -62,7 +62,7 @@ export default function LoginPage() {
           {/* Google Button */}
           <button 
             onClick={handleGoogleLogin}
-            className="w-full bg-neutral-900 text-white font-normal py-4 px-6 rounded-xl hover:bg-neutral-800 transition-all flex items-center justify-center gap-3 shadow-sm group"
+            className="w-full bg-slate-900 text-white font-normal py-4 px-6 rounded-xl hover:opacity-90 transition-all flex items-center justify-center gap-3 shadow-sm group"
           >
             <svg className="w-5 h-5 group-hover:scale-110 transition-transform" viewBox="0 0 24 24">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -83,19 +83,19 @@ export default function LoginPage() {
       </div>
 
       {/* --- RIGHT SIDE: Animation Panel (65% Width) --- */}
-      <div className="hidden lg:flex lg:w-[65%] bg-neutral-50 flex-col items-center justify-center relative">
+      <div className="hidden lg:flex lg:w-[65%] bg-slate-100 flex-col items-center justify-center relative transition-colors">
         
         {/* Text Content (Above Animation) */}
         <div className="text-center z-10 mb-6 max-w-2xl px-6">
-           <h2 className="text-neutral-900 text-[2rem] font-light mb-4 leading-snug">
+           <h2 className="text-slate-900 text-[2rem] font-light mb-4 leading-snug">
              Your Books, Always Current
            </h2>
-           <p className="text-neutral-500 text-base font-light leading-relaxed">
+           <p className="text-slate-500 text-base font-light leading-relaxed">
              We chase unpaid invoices, prep your reports, and flag issues before they become problems.
            </p>
            
            {/* Simple separator */}
-           <div className="mt-8 w-16 h-[1px] bg-neutral-300 mx-auto"></div>
+           <div className="mt-8 w-16 h-[1px] bg-slate-300 mx-auto"></div>
         </div>
 
         {/* Animation (Full Size, No Scaling) 
