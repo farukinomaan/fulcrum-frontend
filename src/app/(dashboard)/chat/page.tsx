@@ -126,32 +126,7 @@ export default function ChatPage() {
     };
 
     return (
-        <div className="flex h-screen bg-slate-50 font-sans text-slate-900">
-
-            {/* --- SIDEBAR --- */}
-            <div className="w-64 bg-white border-r border-slate-200 flex-col hidden md:flex">
-                <div className="p-6 border-b border-slate-100">
-                    <div className="flex items-center gap-3 cursor-pointer" onClick={() => router.push('/')}>
-                        {/* LOGO REPLACEMENT HERE */}
-                        <Image src="/logo.png" alt="Fulcrum Logo" width={32} height={32} className="w-8 h-8" />
-                        <span className="font-semibold text-lg tracking-tight">Fulcrum</span>
-                    </div>
-                </div>
-                <nav className="flex-1 p-4 space-y-1">
-                    <NavItem icon={<ActivityIcon />} label="Live Feed" onClick={() => router.push('/')} />
-                    <NavItem icon={<CreditCard />} label="Transactions" onClick={() => router.push('/?view=transactions')} />
-                    <NavItem icon={<FileText />} label="Reports" onClick={() => router.push('/reports')} />
-                    <NavItem icon={<Zap />} label="Automations" onClick={() => router.push('/automations')} />
-                    <NavItem icon={<MessageSquare />} label="Ask Fulcrum" active />
-                    
-                </nav>
-                <div className="pt-4 mt-4 border-t border-slate-100 p-4">
-                    <NavItem icon={<Settings />} label="Settings" onClick={() => router.push('/settings')} />
-                </div>
-            </div>
-
-            
-
+        <>
             {/* --- MAIN CHAT AREA --- */}
             <div className="flex-1 flex flex-col h-full relative">
 
@@ -246,21 +221,6 @@ export default function ChatPage() {
                 </div>
 
             </div>
-        </div>
-    );
-}
-
-function NavItem({ icon, label, active = false, onClick }: { icon: any, label: string, active?: boolean, onClick?: () => void }) {
-    return (
-        <button
-            onClick={onClick}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${active
-                    ? 'bg-slate-900 text-white shadow-md'
-                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
-                }`}
-        >
-            {React.cloneElement(icon, { className: `w-4 h-4 ${active ? 'text-white' : ''}` })}
-            {label}
-        </button>
+        </>
     );
 }

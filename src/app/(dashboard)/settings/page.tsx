@@ -52,25 +52,6 @@ function getLogoForProvider(name: string | null): string | null {
 
 // Sub-components 
 
-function NavItem({ icon, label, active = false, onClick }: {
-  icon: React.ReactNode; label: string; active?: boolean; onClick?: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-        active
-          ? 'bg-neutral-900 text-white shadow-sm'
-          : 'text-neutral-500 hover:bg-neutral-50 hover:text-neutral-800'
-      }`}
-    >
-      {React.cloneElement(icon as React.ReactElement<{ className?: string }>, {
-        className: `w-4 h-4 ${active ? 'text-white' : 'text-neutral-400'}`,
-      })}
-      {label}
-    </button>
-  );
-}
 
 // Section card wrapper
 function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
@@ -456,30 +437,9 @@ function SettingsContent() {
   ];
 
   return (
-    <div className="min-h-screen bg-neutral-50 flex">
-
-      {/* ── Sidebar ── */}
-      <aside className="w-60 bg-white border-r border-neutral-100 hidden md:flex flex-col fixed h-full z-10">
-        <div className="p-5 border-b border-neutral-100">
-          <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => navigateTo('/')}>
-            <Image src="/logo.png" alt="Fulcrum" width={26} height={26} className="w-6 h-6" />
-            <span className="font-semibold text-base tracking-tight text-neutral-900">Fulcrum</span>
-          </div>
-        </div>
-        <nav className="flex-1 p-4 space-y-0.5">
-          <NavItem icon={<Activity />}     label="Live Feed"    onClick={() => navigateTo('/')} />
-          <NavItem icon={<CreditCard />}   label="Transactions" onClick={() => navigateTo('/?view=transactions')} />
-          <NavItem icon={<FileText />}     label="Reports"      onClick={() => navigateTo('/reports')} />
-          <NavItem icon={<Zap />} label="Automations" onClick={() => router.push('/automations')} />
-          <NavItem icon={<MessageSquare />}label="Ask Fulcrum"  onClick={() => navigateTo('/chat')} />
-        </nav>
-        <div className="p-4 border-t border-neutral-100">
-          <NavItem icon={<SettingsIcon />} label="Settings" active />
-        </div>
-      </aside>
-
+    <>
       {/* ── Main ── */}
-      <main className="flex-1 md:ml-60 min-h-screen">
+      <main className="flex-1 min-h-screen">
         
         {/* Page header */}
         <div className="bg-white border-b border-neutral-100 px-8 py-5 sticky top-0 z-10">
@@ -730,7 +690,7 @@ function SettingsContent() {
           onClose={() => setToast(null)}
         />
       )}
-    </div>
+    </>
   );
 }
 
